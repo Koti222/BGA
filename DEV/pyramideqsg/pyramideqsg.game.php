@@ -33,7 +33,8 @@ class PyramideQSG extends Table
         parent::__construct();
         
         self::initGameStateLabels( array( 
-            //    "my_first_global_variable" => 10,
+            "nbPyramidLevels" => 10,
+            "currentLevel" => 11,
             //    "my_second_global_variable" => 11,
             //      ...
             //    "my_first_game_variant" => 100,
@@ -85,6 +86,9 @@ class PyramideQSG extends Table
         // Init global values with their initial values
         //self::setGameStateInitialValue( 'my_first_global_variable', 0 );
         
+        self::setGameStateInitialValue( 'nbPyramidLevels', 5 );
+        self::setGameStateInitialValue( 'currentLevel', 1 );
+        
         // Init game statistics
         // (note: statistics used in this file must be defined in your stats.inc.php file)
         //self::initStat( 'table', 'table_teststat1', 0 );    // Init a table statistics
@@ -94,9 +98,11 @@ class PyramideQSG extends Table
         
         // Create cards
         $cards = array ();
-        foreach ( $this->colors as $color_id => $color ) {
+        foreach ( $this->colors as $color_id => $color ) 
+        {
             // spade, heart, diamond, club
-            for ($value = 2; $value <= 14; $value ++) {
+            for ($value = 2; $value <= 14; $value ++) 
+            {
                 //  2, 3, 4, ... K, A
                 $cards [] = array ('type' => $color_id,'type_arg' => $value,'nbr' => 1 );
             }
@@ -106,14 +112,22 @@ class PyramideQSG extends Table
         
         // Shuffle deck
         $this->cards->shuffle('deck');
+        
+        $nbLevels = self::getGameStateValue( 'nbPyramidLevels' ) ;
+        
+        for ($lvl = 1; $lvl <= $nbLevels; $lvl++) 
+        {
+            $nbCartes = $nbLevels - $lvl + 1;
+            $cards = $this->cards->pickCardsForLocation($nbCartes, 'deck', 'pyramid', $lvl);
+        }
+        
         // Deal 13 cards to each players
         $players = self::loadPlayersBasicInfos();
-        foreach ( $players as $player_id => $player ) {
-            $cards = $this->cards->pickCards(13, 'deck', $player_id);
+        foreach ( $players as $player_id => $player ) 
+        {
+            $cards = $this->cards->pickCards(4, 'deck', $player_id);
         } 
 
-        // Activate first player (which is in general a good idea :) )
-        $this->activeNextPlayer();
 
         /************ End of the game initialization *****/
     }
@@ -139,6 +153,11 @@ class PyramideQSG extends Table
         $result['players'] = self::getCollectionFromDb( $sql );
   
         // TODO: Gather all information about current game situation (visible by player $current_player_id).
+        
+        $sql = " SELECT * FROM card WHERE card_location = 'pyramid' ";
+       
+        $result['pyramid'] = self::getObjectListFromDB( $sql );
+
         
         // Cards in player hand
         $result['hand'] = $this->cards->getCardsInLocation( 'hand', $current_player_id );
@@ -174,7 +193,7 @@ class PyramideQSG extends Table
     /*
         In this space, you can put any utility methods useful for your game logic
     */
-
+        
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -185,7 +204,20 @@ class PyramideQSG extends Table
         Each time a player is doing some game action, one of the methods below is called.
         (note: each method below must match an input method in pyramideqsg.action.php)
     */
-
+// Give some cards (before the hands begin)
+    function lookCards()
+    {
+        self::checkAction( "lookCards" );
+        
+        // !! Here we have to get CURRENT player (= player who send the request) and not
+        //    active player, cause we are in a multiple active player state and the "active player"
+        //    correspond to nothing.
+        $player_id = self::getCurrentPlayerId();
+        
+        // Make this player unactive now
+        // (and tell the machine state to use transtion "giveCards" if all players are now unactive
+        $this->gamestate->setPlayerNonMultiactive( $player_id, "lookCards" );
+    }
     /*
     
     Example:
@@ -249,6 +281,36 @@ class PyramideQSG extends Table
         The action method of state X is called everytime the current game state is set to X.
     */
     
+    
+    function stLookCards()
+    {
+        $this->gamestate->setAllPlayersMultiactive();
+    }
+    
+    function stShowCard()
+    {
+        // Active next player OR end the trick and go to the next trick OR end the hand
+        
+        $nbLevels = self::getGameStateValue( 'nbPyramidLevels' ) ;
+        $currentLevel = self::getGameStateValue( 'currentLevel' ) ;
+        
+        $sql = "SELECT card_id FROM card WHERE card_location = 'pyramid' AND card_location_arg = ".$currentLevel." AND card_show = '0' LIMIT 1";
+        
+        $cardToShowId = self::getUniqueValueFromDB( $sql );
+        
+        
+        $sql = "UPDATE card SET card_show ='1'
+                    WHERE card_id = ".$cardToShowId;
+        
+        
+        self::DbQuery( $sql );
+        
+        self::notifyAllPlayers( 'showCard', clienttranslate('new card'), array(
+            'card_id' => $cardToShowId
+        ) );
+        
+        $this->gamestate->nextState('showCard');
+    }
     /*
     
     Example for game state "MyGameState":

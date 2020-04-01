@@ -58,18 +58,27 @@ $machinestates = array(
         "description" => "",
         "type" => "manager",
         "action" => "stGameSetup",
-        "transitions" => array( "" => 2 )
+        "transitions" => array( "" => 10 )
     ),
     
     // Note: ID=2 => your first state
 
-    2 => array(
-    		"name" => "playerTurn",
-    		"description" => clienttranslate('${actplayer} must play a card or pass'),
-    		"descriptionmyturn" => clienttranslate('${you} must play a card or pass'),
-    		"type" => "activeplayer",
-    		"possibleactions" => array( "playCard", "pass" ),
-    		"transitions" => array( "playCard" => 2, "pass" => 2 )
+    10 => array(
+		"name" => "lookCards",
+        "description" => clienttranslate('players must memorise your cards.'),
+		"descriptionmyturn" => clienttranslate('${you} must memorise your cards.'),
+        "type" => "multipleactiveplayer",
+        "action" => "stLookCards",
+		"possibleactions" => array( "lookCards" ),
+        "transitions" => array( "lookCards" => 20 )
+    ),
+    
+    20 => array(
+        "name" => "showCard",
+        "description" => '',
+        "type" => "game",
+        "action" => "stShowCard",
+        "transitions" => array( "showCard" => 10, "endGame" =>99 )
     ),
     
 /*

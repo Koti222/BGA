@@ -26,17 +26,16 @@
 -->
 
 
-<div id="playertables">
-
-    <!-- BEGIN player -->
-    <div class="playertable whiteblock playertable_{DIR}">
-        <div class="playertablename" style="color:#{PLAYER_COLOR}">
-            {PLAYER_NAME}
-        </div>
-        <div class="playertablecard" id="playertablecard_{PLAYER_ID}">
+<div id="pyramidtable" class= "whiteblock">
+	<h3>{PYRAMID}</h3>
+	
+    <!-- BEGIN pyramidLevel -->
+    <div class="pyramidLevel" id= "pyramidLevel_{LEVEL}">
+        <div class="playertable" id="pyramidLevelCard_{LEVEL}">
+    		
         </div>
     </div>
-    <!-- END player -->
+    <!-- END pyramidLevel -->
 
 </div>
 
@@ -48,10 +47,10 @@
 
 <script type="text/javascript">
 
-var jstpl_cardontable = '<div class="cardontable" id="cardontable_${player_id}" style="background-position:-${x}px -${y}px">\
-                        </div>';
 // Javascript HTML templates
 
+var jstpl_cardontable = '<div class="cardontable" id="cardontable_${card_id}">\
+                        </div>';
 /*
 // Example:
 var jstpl_some_game_item='<div class="my_game_item" id="my_game_item_${MY_ITEM_ID}"></div>';

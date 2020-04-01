@@ -117,7 +117,8 @@ class heartsQSG extends Table
         $this->cards->shuffle('deck');
         // Deal 13 cards to each players
         $players = self::loadPlayersBasicInfos();
-        foreach ( $players as $player_id => $player ) {
+        foreach ( $players as $player_id => $player ) 
+        {
             $cards = $this->cards->pickCards(13, 'deck', $player_id);
         } 
         // Activate first player (which is in general a good idea :) )

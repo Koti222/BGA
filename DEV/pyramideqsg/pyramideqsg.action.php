@@ -40,7 +40,13 @@
   	} 
   	
   	// TODO: defines your action entry points there
-
+  	
+  	public function lookCards()
+  	{
+  	    self::setAjaxMode();
+  	    $this->game->lookCards( );
+  	    self::ajaxResponse( );
+  	}
 
     /*
     

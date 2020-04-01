@@ -64,8 +64,9 @@ function (dojo, declare) {
             // Player hand
             this.playerHand = new ebg.stock();
             this.playerHand.create( this, $('myhand'), this.cardwidth, this.cardheight );
-            this.playerHand.image_items_per_row = 13;
-            //dojo.connect( this.playerHand, 'onChangeSelection', this, 'onPlayerHandSelectionChanged' );
+            this.playerHand.image_items_per_row = 4;
+			this.playerHand.centerItems = true;
+            dojo.connect( this.playerHand, 'onChangeSelection', this, 'onPlayerHandSelectionChanged' );
             
             // Create cards types:
             for( var color=1;color<=4;color++ )
@@ -77,6 +78,7 @@ function (dojo, declare) {
                     this.playerHand.addItemType( card_type_id, card_type_id, g_gamethemeurl+'img/cards.jpg', card_type_id );
                 }
             }
+            console.log( "avant1 " + this.gamedatas.hand);
             
             // Cards in player's hand
             for( var i in this.gamedatas.hand )
@@ -88,15 +90,16 @@ function (dojo, declare) {
             }
             
             // Cards played on table
-            for( i in this.gamedatas.cardsontable )
+
+            console.log(this.gamedatas.pyramid);
+            for(var i in this.gamedatas.pyramid)
             {
-                var card = this.gamedatas.cardsontable[i];
-                var color = card.type;
-                var value = card.type_arg;
-                var player_id = card.location_arg;
-                this.playCardOnTable( player_id, color, value, card.id );
+                var card = this.gamedatas.pyramid[i];
+                var color = card['card_type'];
+                var value = card['card_type_arg'];
+                var levelID = card['card_location_arg'];
+                this.placeCardOnPyramid( levelID, color, value, card['card_id'] );
             }
-            
             //this.addTooltipToClass( "playertablecard", _("Card played on the table"), '' );
  
             // Setup game notifications to handle (see "setupNotifications" method below)
@@ -169,11 +172,15 @@ function (dojo, declare) {
         onUpdateActionButtons: function( stateName, args )
         {
             console.log( 'onUpdateActionButtons: '+stateName );
-                      
+            
             if( this.isCurrentPlayerActive() )
             {            
                 switch( stateName )
                 {
+                
+                case 'lookCards':
+                    this.addActionButton( 'lookCards_button', _('Ready to start'), 'onLookCards' ); 
+                    break;
 /*               
                  Example:
  
@@ -205,6 +212,52 @@ function (dojo, declare) {
         {
             return (color-1)*13+(value-2);
         },
+        
+        placeCardOnPyramid : function(lvl, color, value, card_id) 
+		{
+        	var show = true;
+        	if(show)
+            // player_id => direction
+            dojo.place(this.format_block('jstpl_cardontable', {
+                card_id : card_id
+            }), 'pyramidLevelCard_' + lvl);
+
+            console.log('dojo');
+            
+            this.setvisibilityCard(card_id);
+        },
+        
+        setvisibilityCard:function(card_id)
+        {
+        	console.log('setvisibilityCard');
+        	for(var i in this.gamedatas.pyramid)
+        	{
+        		var card = this.gamedatas.pyramid[i];
+        		if(card['card_id'] == card_id)
+        		{ 
+        			var color = card['card_type'];
+        			var value = card['card_type_arg'];
+        			var x = this.cardwidth * (value - 2);
+                    var y = this.cardheight * (color - 1);
+                    
+
+                	console.log('card.card_show ' + card['card_show']);
+                	
+        			if(card['card_show'] == 1)
+        			{
+            			dojo.style( 'cardontable_' + card_id, 'backgroundPosition', x+'px '+y+'px' );
+            			dojo.removeClass('cardontable_' + card_id, 'cardhide');
+            			dojo.addClass('cardontable_' + card_id, 'cardshow');
+        			}
+        			else
+        			{
+            			dojo.style( 'cardontable_' + card_id, 'backgroundPosition', '0px 0px' );
+            			dojo.removeClass('cardontable_' + card_id, 'cardshow');
+            			dojo.addClass('cardontable_' + card_id, 'cardhide');
+        			}
+        		}
+        	}
+        },
 
         ///////////////////////////////////////////////////
         //// Player's action
@@ -219,7 +272,31 @@ function (dojo, declare) {
             _ make a call to the game server
         
         */
+
         
+        onLookCards: function()
+        {
+            if( this.checkAction( 'lookCards' ) )
+            {
+            	
+            	this.confirmationDialog( _('Are you sure you memorise your cards ?'), 
+            			
+            			dojo.hitch( this, function() 
+            					{
+		            				this.ajaxcall( "/pyramideqsg/pyramideqsg/lookCards.html", { lock: true }, this, function( result ) {}, function( is_error) { } );                
+            					} 
+            			
+            			) ); 
+            	
+            	return;
+                
+            }        
+        },
+        
+        onPlayerHandSelectionChanged : function() 
+		{
+            var items = this.playerHand.getSelectedItems();
+        },
         /* Example:
         
         onMyMethodToCall1: function( evt )
@@ -270,7 +347,8 @@ function (dojo, declare) {
         setupNotifications: function()
         {
             console.log( 'notifications subscriptions setup' );
-            
+
+            dojo.subscribe( 'showCard', this, "notif_showCard" );
             // TODO: here, associate your game notifications with local methods
             
             // Example 1: standard notification handling
@@ -285,7 +363,12 @@ function (dojo, declare) {
         },  
         
         // TODO: from this point and below, you can write your game notifications handling methods
-        
+
+        notif_showCard: function( notif )
+        {
+            console.log( 'notif_showCard ' + notif.args.card_id + 'fggfd');
+            this.setvisibilityCard(notif.args.card_id);
+        },
         /*
         Example:
         
