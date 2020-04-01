@@ -65,7 +65,7 @@ $machinestates = array(
 
     10 => array(
 		"name" => "lookCards",
-        "description" => clienttranslate('players must memorise your cards.'),
+        "description" => clienttranslate('All players must memorise your cards.'),
 		"descriptionmyturn" => clienttranslate('${you} must memorise your cards.'),
         "type" => "multipleactiveplayer",
         "action" => "stLookCards",
@@ -78,7 +78,29 @@ $machinestates = array(
         "description" => '',
         "type" => "game",
         "action" => "stShowCard",
-        "transitions" => array( "showCard" => 10, "endGame" =>99 )
+        "transitions" => array( "showCard" => 30, "endGame" =>99 )
+    ),
+    
+    
+    30 => array(
+        "name" => "choosePlayer",
+        "description" => clienttranslate('All players must choose a player or pass.'),
+        "descriptionmyturn" => clienttranslate('${you} must choose a player or pass.'),
+        "type" => "multipleactiveplayer",
+        "action" => "stLookCards",
+        "possibleactions" => array( "choosePlayer", "pass" ),
+        "transitions" => array( "choosePlayer" => 40, "pass" => 40)
+    ),
+    
+    40 => array(
+        "name" => "acceptOrLye",
+        "description" => clienttranslate('Some players must accept or refuse the given sips.'),
+        "descriptionmyturn" => clienttranslate('${player_name} give you ${nb_splits} split(s). Accept or refuse ? '),
+        "type" => "multipleactiveplayer",
+        "action" => "stAcceptOrLye",
+        "args" => "argAcceptOrLye",
+        "possibleactions" => array( "acceptOrLye", "pass" ),
+        "transitions" => array( "acceptOrLye" => 20, "pass" => 20)
     ),
     
 /*

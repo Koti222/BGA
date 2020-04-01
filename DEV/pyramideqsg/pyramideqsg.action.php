@@ -41,13 +41,22 @@
   	
   	// TODO: defines your action entry points there
   	
-  	public function lookCards()
+  	public function ready()
   	{
   	    self::setAjaxMode();
-  	    $this->game->lookCards( );
+  	    $action_name = self::getArg("action_name", AT_alphanum, true);
+  	    $this->game->ready($action_name);
   	    self::ajaxResponse( );
   	}
-
+  	
+  	public function choosePlayer()
+  	{
+  	    self::setAjaxMode();
+  	    $from_player_id = self::getArg("from_player_id", AT_posint, true);
+  	    $to_player_id = self::getArg("to_player_id", AT_posint, true);
+  	    $this->game->choosePlayer($from_player_id, $to_player_id);
+  	    self::ajaxResponse( );
+  	}
     /*
     
     Example:

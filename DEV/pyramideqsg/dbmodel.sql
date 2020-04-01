@@ -20,7 +20,8 @@
 
 -- Example 1: create a standard "card" table to be used with the "Deck" tools (see example game "hearts"):
 
-ALTER TABLE `player` ADD `player_first` BOOLEAN NOT NULL DEFAULT '0';
+-- add info about first player
+ALTER TABLE `player` ADD `player_sips` varchar(255);
 
 
 CREATE TABLE IF NOT EXISTS `card` (

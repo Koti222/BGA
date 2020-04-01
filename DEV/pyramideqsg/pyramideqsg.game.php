@@ -86,7 +86,7 @@ class PyramideQSG extends Table
         // Init global values with their initial values
         //self::setGameStateInitialValue( 'my_first_global_variable', 0 );
         
-        self::setGameStateInitialValue( 'nbPyramidLevels', 5 );
+        self::setGameStateInitialValue( 'nbPyramidLevels', 2 );
         self::setGameStateInitialValue( 'currentLevel', 1 );
         
         // Init game statistics
@@ -149,9 +149,10 @@ class PyramideQSG extends Table
     
         // Get information about players
         // Note: you can retrieve some extra field you added for "player" table in "dbmodel.sql" if you need it.
-        $sql = "SELECT player_id id, player_score score FROM player ";
-        $result['players'] = self::getCollectionFromDb( $sql );
-  
+//         $sql = "SELECT player_id id, player_score score FROM player ";
+//         $result['players'] = self::getCollectionFromDb( $sql );
+
+        $result['players'] = self::loadPlayersBasicInfos();
         // TODO: Gather all information about current game situation (visible by player $current_player_id).
         
         $sql = " SELECT * FROM card WHERE card_location = 'pyramid' ";
@@ -205,9 +206,9 @@ class PyramideQSG extends Table
         (note: each method below must match an input method in pyramideqsg.action.php)
     */
 // Give some cards (before the hands begin)
-    function lookCards()
+    function ready($action_name)
     {
-        self::checkAction( "lookCards" );
+        self::checkAction( $action_name );
         
         // !! Here we have to get CURRENT player (= player who send the request) and not
         //    active player, cause we are in a multiple active player state and the "active player"
@@ -216,7 +217,45 @@ class PyramideQSG extends Table
         
         // Make this player unactive now
         // (and tell the machine state to use transtion "giveCards" if all players are now unactive
-        $this->gamestate->setPlayerNonMultiactive( $player_id, "lookCards" );
+        $this->gamestate->setPlayerNonMultiactive( $player_id, $action_name );
+    }
+    
+    function choosePlayer($from_player_id, $to_player_id)
+    {
+        self::checkAction( 'choosePlayer' );
+        
+        // !! Here we have to get CURRENT player (= player who send the request) and not
+        //    active player, cause we are in a multiple active player state and the "active player"
+        //    correspond to nothing.
+        $player_id = self::getCurrentPlayerId();
+        
+        $players = self::loadPlayersBasicInfos();
+        
+        $from_player = $players[$from_player_id];
+        $to_player = $players[$to_player_id];
+        $nbSips = 1;
+        $newSip =  $from_player_id."_".$nbSips;
+        
+        $sql = "UPDATE player SET player_sips = '".$newSip."'
+                        WHERE player_id = ".$to_player_id;
+        
+        self::DbQuery( $sql );
+        
+        self::notifyAllPlayers( 'choosePlayer', clienttranslate('${from_player_name} give '.$nbSips.' sip(s) to ${to_player_name}.'), array(
+            'i18n' => array( 'from_player_name', 'to_player_name' ),
+            'from_player' => $from_player,
+            'to_player' => $to_player,
+            'from_player_name' => $from_player['player_name'],
+            'to_player_name' => $to_player['player_name'],
+            'nbSips' => $nbSips
+        ) );
+        
+        if($from_player_id == $player_id)
+        {
+            // Make this player unactive now
+            // (and tell the machine state to use transtion "giveCards" if all players are now unactive
+            $this->gamestate->setPlayerNonMultiactive( $player_id, 'choosePlayer' );
+        }
     }
     /*
     
@@ -254,7 +293,31 @@ class PyramideQSG extends Table
         These methods function is to return some additional information that is specific to the current
         game state.
     */
-
+    
+    function argAcceptOrLye()
+    {
+        $current_player_id = self::getCurrentPlayerId();
+        
+        $active_players = array();
+        
+        $player_sips = self::getUniqueValueFromDB( "SELECT player_sips id FROM player
+                                                         WHERE player_id = ".$current_player_id);
+        
+        if($player_sips != null)
+        {
+            $player_sips_infos = explode('_', $player_sips);
+            $player_id = $player_sips_infos[0];
+            $nb_splits = $player_sips_infos[1];
+            
+            $players = self::loadPlayersBasicInfos();
+            
+            return array(
+                "i18n" => array( 'player_name', 'nb_splits'),
+                "player_name" => $players[$player_id]['player_name'],
+                "nb_splits" => $nb_splits
+            );
+        }     
+    }
     /*
     
     Example for game state "MyGameState":
@@ -287,6 +350,20 @@ class PyramideQSG extends Table
         $this->gamestate->setAllPlayersMultiactive();
     }
     
+    function stAcceptOrLye()
+    {
+        $active_players = array();
+        
+        $rs_items = self::DbQuery( "SELECT player_id id FROM player
+                                                         WHERE player_sips IS NOT NULL");
+
+        while($news = mysql_fetch_assoc($rs_items))
+        {
+            $active_players[] = $news['id'];
+        }
+        $this->gamestate->setPlayersMultiactive($active_players,'acceptOrLye');
+    }
+    
     function stShowCard()
     {
         // Active next player OR end the trick and go to the next trick OR end the hand
@@ -294,22 +371,35 @@ class PyramideQSG extends Table
         $nbLevels = self::getGameStateValue( 'nbPyramidLevels' ) ;
         $currentLevel = self::getGameStateValue( 'currentLevel' ) ;
         
-        $sql = "SELECT card_id FROM card WHERE card_location = 'pyramid' AND card_location_arg = ".$currentLevel." AND card_show = '0' LIMIT 1";
+        $sql = "SELECT card_id id, card_type type, card_type_arg type_arg FROM card WHERE card_location = 'pyramid' AND card_location_arg = ".$currentLevel." AND card_show = '0'";
         
-        $cardToShowId = self::getUniqueValueFromDB( $sql );
         
+        $cardsHiddenOnCurrentLevel = self::getCollectionFromDB( $sql );
+        $nbCardsHidden = count ($cardsHiddenOnCurrentLevel);
+        $cardToShow = reset($cardsHiddenOnCurrentLevel);
+        
+        if($nbCardsHidden <= 1)
+            self::incGameStateValue( 'currentLevel', 1 );
         
         $sql = "UPDATE card SET card_show ='1'
-                    WHERE card_id = ".$cardToShowId;
-        
+                    WHERE card_id = ".$cardToShow['id'];
         
         self::DbQuery( $sql );
         
-        self::notifyAllPlayers( 'showCard', clienttranslate('new card'), array(
-            'card_id' => $cardToShowId
+        
+        self::notifyAllPlayers( 'showCard', clienttranslate('The new card is revealed : ${value_displayed} ${color_displayed}'), array(
+            'i18n' => array( 'color_displayed', 'value_displayed' ),
+            'card_id' => $cardToShow['id'],
+            'color' => $cardToShow['type'],
+            'color_displayed' => $this->colors[ $cardToShow['type'] ]['name'],
+            'value' => $cardToShow['type_arg'],
+            'value_displayed' => $this->values_label[ $cardToShow['type_arg'] ]
         ) );
         
-        $this->gamestate->nextState('showCard');
+        if($currentLevel != $nbLevels)
+            $this->gamestate->nextState('showCard');
+            else
+                $this->gamestate->nextState('endGame');
     }
     /*
     

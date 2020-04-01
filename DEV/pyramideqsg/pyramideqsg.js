@@ -31,6 +31,8 @@ function (dojo, declare) {
             // this.myGlobalValue = 0;
             this.cardwidth = 72;
             this.cardheight = 96;
+            this.sips = [];
+            
 
         },
         
@@ -64,7 +66,7 @@ function (dojo, declare) {
             // Player hand
             this.playerHand = new ebg.stock();
             this.playerHand.create( this, $('myhand'), this.cardwidth, this.cardheight );
-            this.playerHand.image_items_per_row = 4;
+            this.playerHand.image_items_per_row = 13;
 			this.playerHand.centerItems = true;
             dojo.connect( this.playerHand, 'onChangeSelection', this, 'onPlayerHandSelectionChanged' );
             
@@ -98,7 +100,8 @@ function (dojo, declare) {
                 var color = card['card_type'];
                 var value = card['card_type_arg'];
                 var levelID = card['card_location_arg'];
-                this.placeCardOnPyramid( levelID, color, value, card['card_id'] );
+                console.log(card);
+                this.placeCardOnPyramid( levelID, color, value, card['card_id'], card['card_show'] == '1' );
             }
             //this.addTooltipToClass( "playertablecard", _("Card played on the table"), '' );
  
@@ -181,6 +184,22 @@ function (dojo, declare) {
                 case 'lookCards':
                     this.addActionButton( 'lookCards_button', _('Ready to start'), 'onLookCards' ); 
                     break;
+                    
+                case 'choosePlayer':
+                	
+                	 for( var player_id in this.gamedatas.players )
+                     {
+                		 if(player_id == this.player_id) continue;
+                		 var player = this.gamedatas.players[player_id];
+                         this.addActionButton( 'choosePlayer_button_' + player_id,player['player_name'], 'onChoosePlayer' ); 
+                     } 
+                     this.addActionButton( 'pass_button', _('Pass'), 'onPass' ); 
+                    break;
+                    
+                case 'acceptOrLye':
+                    this.addActionButton( 'accept_button', _('Accept'),'onAcceptDrink' );  
+                    this.addActionButton( 'refuse_button', _('Refuse'), 'onRefuseDrink' ); 
+                   break;
 /*               
                  Example:
  
@@ -207,56 +226,53 @@ function (dojo, declare) {
         
         */
         
+        setSips: function(player_id, nb_sips) 
+        {
+            this.sips.push({player_id: player_id, nb_sips: nb_sips});        
+        },
+        
         // Get card unique identifier based on its color and value
         getCardUniqueId: function( color, value )
         {
             return (color-1)*13+(value-2);
         },
         
-        placeCardOnPyramid : function(lvl, color, value, card_id) 
+        placeCardOnPyramid : function(lvl, color, value, card_id, show) 
 		{
-        	var show = true;
-        	if(show)
-            // player_id => direction
+        	
             dojo.place(this.format_block('jstpl_cardontable', {
                 card_id : card_id
             }), 'pyramidLevelCard_' + lvl);
 
             console.log('dojo');
             
-            this.setvisibilityCard(card_id);
+            this.setvisibilityCard(card_id, color, value, show);
         },
         
-        setvisibilityCard:function(card_id)
+        setvisibilityCard:function(card_id, color, value, show)
         {
         	console.log('setvisibilityCard');
-        	for(var i in this.gamedatas.pyramid)
-        	{
-        		var card = this.gamedatas.pyramid[i];
-        		if(card['card_id'] == card_id)
-        		{ 
-        			var color = card['card_type'];
-        			var value = card['card_type_arg'];
-        			var x = this.cardwidth * (value - 2);
-                    var y = this.cardheight * (color - 1);
-                    
+			if(show)
+			{
+            	console.log('pouleto 1 : ' + show);
 
-                	console.log('card.card_show ' + card['card_show']);
-                	
-        			if(card['card_show'] == 1)
-        			{
-            			dojo.style( 'cardontable_' + card_id, 'backgroundPosition', x+'px '+y+'px' );
-            			dojo.removeClass('cardontable_' + card_id, 'cardhide');
-            			dojo.addClass('cardontable_' + card_id, 'cardshow');
-        			}
-        			else
-        			{
-            			dojo.style( 'cardontable_' + card_id, 'backgroundPosition', '0px 0px' );
-            			dojo.removeClass('cardontable_' + card_id, 'cardshow');
-            			dojo.addClass('cardontable_' + card_id, 'cardhide');
-        			}
-        		}
-        	}
+            	console.log('value 1 : ' + value);
+            	console.log('color 1 : ' + color);
+            	
+    			var x = -this.cardwidth * (value - 2);
+                var y = -this.cardheight * (color - 1);
+                var tt = 
+    			dojo.style( 'cardontable_' + card_id, 'backgroundPosition', x+'px '+y+'px' );
+    			dojo.removeClass('cardontable_' + card_id, 'cardhide');
+    			dojo.addClass('cardontable_' + card_id, 'cardshow');
+			}
+			else
+			{
+            	console.log('pouleto 0 : ' + show);
+    			dojo.style( 'cardontable_' + card_id, 'backgroundPosition', '0px 0px' );
+    			dojo.removeClass('cardontable_' + card_id, 'cardshow');
+    			dojo.addClass('cardontable_' + card_id, 'cardhide');
+			}
         },
 
         ///////////////////////////////////////////////////
@@ -278,18 +294,101 @@ function (dojo, declare) {
         {
             if( this.checkAction( 'lookCards' ) )
             {
-            	
             	this.confirmationDialog( _('Are you sure you memorise your cards ?'), 
             			
             			dojo.hitch( this, function() 
             					{
-		            				this.ajaxcall( "/pyramideqsg/pyramideqsg/lookCards.html", { lock: true }, this, function( result ) {}, function( is_error) { } );                
+		            				this.ajaxcall( "/pyramideqsg/pyramideqsg/ready.html", {
+		            						
+		            						action_name: 'lookCards',
+		                                    lock: true 
+		                                    }, this, function( result ) {  }, function( is_error) { } );                    
             					} 
             			
             			) ); 
             	
             	return;
                 
+            }        
+        },
+        
+        onPass: function()
+        {
+            if( this.checkAction( 'pass' ) )
+            {
+            	this.ajaxcall( "/pyramideqsg/pyramideqsg/ready.html", {
+		            						
+		            						action_name: 'pass',
+		                                    lock: true 
+		                                    }, this, function( result ) {  }, function( is_error) { } );    
+            }        
+        },
+        
+        onChoosePlayer: function(evt)
+        {
+            
+            if( this.checkAction( 'choosePlayer' ) )
+            {
+
+                // Stop this event propagation
+                evt.preventDefault();
+
+                var buttonName = evt.target.id.split('_');
+                var target_player_id = buttonName[2];
+            	this.ajaxcall( "/pyramideqsg/pyramideqsg/choosePlayer.html", {
+		            						from_player_id: this.player_id,
+		            						to_player_id: target_player_id,
+		                                    lock: true 
+		                                    }, this, function( result ) {  }, function( is_error) { } );   
+            	
+            }        
+        },
+        
+
+        onAcceptDrink: function(evt)
+        {
+            
+            if( this.checkAction( 'acceptOrLye' ) )
+            {
+
+                // Stop this event propagation
+                evt.preventDefault();
+
+            	console.log('onAcceptDrink');
+            	console.log(this.sips);
+                for(var sip in this.sips)
+                {
+                	console.log(sip);
+                }
+                
+                this.ajaxcall( "/pyramideqsg/pyramideqsg/ready.html", {
+					
+					action_name: 'pass',
+                    lock: true 
+                    }, this, function( result ) {  }, function( is_error) { } );    
+            }        
+        },
+        
+        onRefuseDrink: function(evt)
+        {
+            
+            if( this.checkAction( 'acceptOrLye' ) )
+            {
+
+                // Stop this event propagation
+                evt.preventDefault();
+
+            	console.log('onRefuseDrink');
+                for(var sip in this.sips)
+                {
+                	console.log(sip);
+                }
+                
+                this.ajaxcall( "/pyramideqsg/pyramideqsg/ready.html", {
+					
+					action_name: 'pass',
+                    lock: true 
+                    }, this, function( result ) {  }, function( is_error) { } );    
             }        
         },
         
@@ -349,6 +448,7 @@ function (dojo, declare) {
             console.log( 'notifications subscriptions setup' );
 
             dojo.subscribe( 'showCard', this, "notif_showCard" );
+            dojo.subscribe( 'choosePlayer', this, "notif_choosePlayer" );
             // TODO: here, associate your game notifications with local methods
             
             // Example 1: standard notification handling
@@ -367,7 +467,19 @@ function (dojo, declare) {
         notif_showCard: function( notif )
         {
             console.log( 'notif_showCard ' + notif.args.card_id + 'fggfd');
-            this.setvisibilityCard(notif.args.card_id);
+            this.setvisibilityCard(notif.args.card_id,notif.args.color, notif.args.value, true);
+        },
+        
+        notif_choosePlayer: function( notif )
+        {
+            console.log(this.player_id);
+            console.log(notif.args.to_player['player_id']);
+            console.log(this.player_id == notif.args.to_player['player_id']);
+        	if(this.player_id == notif.args.to_player['player_id'])
+        	{
+        		this.setSips(notif.args.from_player['player_id'], notif.args.nbSips);
+                console.log( notif.args.from_player);
+        	}
         },
         /*
         Example:
