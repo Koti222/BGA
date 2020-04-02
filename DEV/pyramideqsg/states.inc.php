@@ -78,7 +78,7 @@ $machinestates = array(
         "description" => '',
         "type" => "game",
         "action" => "stShowCard",
-        "transitions" => array( "showCard" => 30, "endGame" =>99 )
+        "transitions" => array( "showCard" => 30 ,  "endHand" => 99 )
     ),
     
     
@@ -89,18 +89,42 @@ $machinestates = array(
         "type" => "multipleactiveplayer",
         "action" => "stLookCards",
         "possibleactions" => array( "choosePlayer", "pass" ),
-        "transitions" => array( "choosePlayer" => 40, "pass" => 40)
+        "transitions" => array( "choosePlayer" => 32, "pass" => 32)
     ),
     
+    32 => array(
+        "name" => "nextacceptOrRefuse",
+        "description" => "",
+        "type" => "game",
+        "action" => "stNextAcceptOrRefuse",
+        "transitions" => array( "acceptOrRefuse" => 40, 'showCard' => 30,  "endHand" => 99 )
+    ), 
+    
     40 => array(
-        "name" => "acceptOrLye",
+        "name" => "acceptOrRefuse",
         "description" => clienttranslate('Some players must accept or refuse the given sips.'),
         "descriptionmyturn" => clienttranslate('${player_name} give you ${nb_splits} split(s). Accept or refuse ? '),
-        "type" => "multipleactiveplayer",
-        "action" => "stAcceptOrLye",
-        "args" => "argAcceptOrLye",
-        "possibleactions" => array( "acceptOrLye", "pass" ),
-        "transitions" => array( "acceptOrLye" => 20, "pass" => 20)
+        "type" => "activeplayer",
+        "args" => "argAcceptOrRefuse",
+        "possibleactions" => array( "acceptOrRefuse" ),
+        "transitions" => array( "accept" => 32, "refuse" => 42 )
+    ),
+    
+    42 => array(
+        "name" => "nextProve",
+        "description" => "",
+        "type" => "game",
+        "action" => "stNextProve",
+        "transitions" => array( "prove" => 40 , "nextAcceptOrRefuse" => 32)
+    ), 
+    
+    50 => array(
+        "name" => "prove",
+        "description" => clienttranslate('Some players must prove they have the good cards.'),
+        "descriptionmyturn" => clienttranslate('${you} must show your card(s).Select'),
+        "type" => "activeplayer",
+        "possibleactions" => array( "prove", "pass" ),
+        "transitions" => array( "" => 32)
     ),
     
 /*

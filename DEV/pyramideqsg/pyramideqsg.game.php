@@ -35,6 +35,7 @@ class PyramideQSG extends Table
         self::initGameStateLabels( array( 
             "nbPyramidLevels" => 10,
             "currentLevel" => 11,
+            "currentCardId" => 12,
             //    "my_second_global_variable" => 11,
             //      ...
             //    "my_first_game_variant" => 100,
@@ -86,8 +87,9 @@ class PyramideQSG extends Table
         // Init global values with their initial values
         //self::setGameStateInitialValue( 'my_first_global_variable', 0 );
         
-        self::setGameStateInitialValue( 'nbPyramidLevels', 2 );
+        self::setGameStateInitialValue( 'nbPyramidLevels', 3 );
         self::setGameStateInitialValue( 'currentLevel', 1 );
+        self::setGameStateInitialValue( 'currentCardId', 0 );
         
         // Init game statistics
         // (note: statistics used in this file must be defined in your stats.inc.php file)
@@ -159,12 +161,15 @@ class PyramideQSG extends Table
        
         $result['pyramid'] = self::getObjectListFromDB( $sql );
 
-        
         // Cards in player hand
         $result['hand'] = $this->cards->getCardsInLocation( 'hand', $current_player_id );
         
-        // Cards played on the table
-        $result['cardsontable'] = $this->cards->getCardsInLocation( 'cardsontable' );
+        
+        $sql = " SELECT sip_giver_id giver_id, sip_nb nb_sips  FROM sip WHERE sip_receiver_id = ".$current_player_id." ORDER BY sip_ordre";
+        $result['received_sips'] = self::getObjectListFromDB( $sql );
+        
+        $sql = " SELECT sip_receiver_id receiver_id, sip_nb nb_sips  FROM sip WHERE sip_giver_id = ".$current_player_id." ORDER BY sip_ordre";
+        $result['given_sips'] = self::getObjectListFromDB( $sql );
         
         return $result;
     }
@@ -220,7 +225,7 @@ class PyramideQSG extends Table
         $this->gamestate->setPlayerNonMultiactive( $player_id, $action_name );
     }
     
-    function choosePlayer($from_player_id, $to_player_id)
+    function choosePlayer($giver_id, $receiver_id)
     {
         self::checkAction( 'choosePlayer' );
         
@@ -231,31 +236,149 @@ class PyramideQSG extends Table
         
         $players = self::loadPlayersBasicInfos();
         
-        $from_player = $players[$from_player_id];
-        $to_player = $players[$to_player_id];
-        $nbSips = 1;
-        $newSip =  $from_player_id."_".$nbSips;
+        $giver = $players[$giver_id];
+        $receiver = $players[$receiver_id];
+        $nb_sips = 1;
         
-        $sql = "UPDATE player SET player_sips = '".$newSip."'
-                        WHERE player_id = ".$to_player_id;
+        $nbActions = self::getUniqueValueFromDB("SELECT MAX(sip_ordre) FROM sip") + 1;
+        $sql = "INSERT INTO `sip`(`sip_giver_id`, `sip_receiver_id`, `sip_nb`,`sip_ordre`) VALUES (".$giver_id.",".$receiver_id.",".$nb_sips.",".$nbActions.")";
         
         self::DbQuery( $sql );
         
-        self::notifyAllPlayers( 'choosePlayer', clienttranslate('${from_player_name} give '.$nbSips.' sip(s) to ${to_player_name}.'), array(
-            'i18n' => array( 'from_player_name', 'to_player_name' ),
-            'from_player' => $from_player,
-            'to_player' => $to_player,
-            'from_player_name' => $from_player['player_name'],
-            'to_player_name' => $to_player['player_name'],
-            'nbSips' => $nbSips
+        self::notifyAllPlayers( 'choosePlayer', clienttranslate('${giver_name} give ${nb_sips_diplayed} sip(s) to ${receiver_name}.'), array(
+            'i18n' => array( 'giver_name', 'receiver_name', 'nb_sips_diplayed' ),
+            'giver' => $giver,
+            'receiver' => $receiver,
+            'giver_name' => $giver['player_name'],
+            'receiver_name' => $receiver['player_name'],
+            'nb_sips_diplayed' => $nb_sips,
+            'nb_sips' => $nb_sips
         ) );
         
-        if($from_player_id == $player_id)
+        if($giver_id == $player_id)
         {
             // Make this player unactive now
             // (and tell the machine state to use transtion "giveCards" if all players are now unactive
             $this->gamestate->setPlayerNonMultiactive( $player_id, 'choosePlayer' );
         }
+    }
+    
+    
+    function acceptOrRefuse($giver_id, $receiver_id, $accept)
+    {
+        self::checkAction( 'acceptOrRefuse' );
+        
+        // !! Here we have to get CURRENT player (= player who send the request) and not
+        //    active player, cause we are in a multiple active player state and the "active player"
+        //    correspond to nothing.
+        $player_id = self::getCurrentPlayerId();
+        
+        $players = self::loadPlayersBasicInfos();
+        
+        $giver = $players[$giver_id];
+        $receiver = $players[$receiver_id];
+        
+        $nb_sips = self::getUniqueValueFromDB( "SELECT sip_nb FROM sip WHERE sip_receiver_id = ".$receiver_id." AND sip_giver_id = ".$giver_id);
+        
+        if($nb_sips != null)
+        {
+            if($accept)
+            {
+                self::notifyAllPlayers( 'accept', clienttranslate('${receiver_name} accept ${nb_sips} sip(s) from ${giver_name}.'), array(
+                    'i18n' => array( 'receiver_name', 'giver_name', 'nb_sips' ),
+                    'receiver' => $receiver,
+                    'giver' => $giver,
+                    'giver_name' => $giver['player_name'],
+                    'receiver_name' => $receiver['player_name'],
+                    'nb_sips' => $nb_sips,
+                ) );
+                
+                $sql = "DELETE FROM sip WHERE sip_receiver_id = ".$receiver_id." AND sip_giver_id = ".$giver_id;
+                self::DbQuery( $sql );
+                
+                $this->gamestate->nextState( 'accept' );  
+            }
+            else
+            {
+                self::notifyAllPlayers( 'refuse', clienttranslate('${receiver_name} refuse ${nb_sips} sip(s) from ${giver_name}.'), array(
+                'i18n' => array( 'receiver_name', 'giver_name', 'nb_sips' ),
+                'receiver' => $receiver,
+                'giver' => $giver,
+                'giver_name' => $giver['player_name'],
+                'receiver_name' => $receiver['player_name'],
+                'nb_sips' => $nb_sips,
+                ) );
+                
+                $this->gamestate->nextState( 'refuse' );  
+            }
+        }
+    }
+    
+    
+    // Play a card from player hand
+    function prove($giver_id, $card_id)
+    {
+        self::checkAction( "prove" );
+        
+        $players = self::loadPlayersBasicInfos();
+        
+        
+        if($card_id != null)
+        {
+            $card_pyramid_id = self::getGameStateValue( 'currentCardId');
+            $card_pyramid = $this->cards->getCard($card_pyramid_id);
+            
+            $card_player = $this->cards->getCard($card_id);
+            
+            $isSame = $card_player['type_arg'] == $card_pyramid['type_arg'];
+            
+            $sql = " SELECT sip_receiver_id receiver_id, sip_nb nb_sips FROM sip WHERE sip_giver_id = ".$giver_id;
+            
+            $sip = self::getObjectFromDB($sql);
+            $nb_sips = $sip['nb_sips']*2;
+            
+            $receiver = $players[$sip['receiver_id']];
+            $giver = $players[$giver_id];
+            
+            if($isSame)
+            {
+                self::notifyAllPlayers( 'prove', clienttranslate('${giver_name} is not a lyer. He has a ${value_displayed} ${color_displayed}. ${receiver_name} must drink the double (${nb_sips} sips).'), array(
+                    'i18n' => array( 'receiver_name', 'giver_name', 'nb_sips', 'color_displayed', 'value_displayed' ),
+                    'receiver' => $receiver,
+                    'giver' => $giver,
+                    'giver_name' => $giver['player_name'],
+                    'receiver_name' => $receiver['player_name'],
+                    'nb_sips' => $nb_sips,
+                    'color' => $card_player['type'],
+                    'color_displayed' => $this->colors[ $card_player['type'] ]['name'],
+                    'value' => $card_player['type_arg'],
+                    'value_displayed' => $this->values_label[ $card_player['type_arg'] ],
+                    'giver_card'=>$card_player
+                    
+                ) );
+            }
+            else
+            {
+                self::notifyAllPlayers( 'lye', clienttranslate('${giver_name} is a lyer. He has a ${value_displayed} ${color_displayed}. ${giver_name} must drink the double (${nb_sips} sips).'), array(
+                    'i18n' => array( 'giver_name', 'nb_sips', 'color_displayed', 'value_displayed' ),
+                    'giver' => $giver,
+                    'giver_name' => $giver['player_name'],
+                    'nb_sips' => $nb_sips,
+                    'color' => $card_player['type'],
+                    'color_displayed' => $this->colors[ $card_player['type'] ]['name'],
+                    'value' => $card_player['type_arg'],
+                    'value_displayed' => $this->values_label[ $card_player['type_arg'] ],
+                    'giver_card'=>$card_player
+                    
+                ) );
+            }
+        }
+                
+        $sql = "DELETE FROM sip WHERE sip_receiver_id = ".$sip['receiver_id']." AND sip_giver_id = ".$giver_id;
+        self::DbQuery( $sql );
+        
+        $this->gamestate->nextState('');
+        
     }
     /*
     
@@ -294,29 +417,24 @@ class PyramideQSG extends Table
         game state.
     */
     
-    function argAcceptOrLye()
+    function argAcceptOrRefuse()
     {
         $current_player_id = self::getCurrentPlayerId();
         
         $active_players = array();
         
-        $player_sips = self::getUniqueValueFromDB( "SELECT player_sips id FROM player
-                                                         WHERE player_id = ".$current_player_id);
+        $sip_actions = self::getObjectListFromDB( "SELECT sip_giver_id id, sip_nb nb FROM sip WHERE sip_receiver_id = ".$current_player_id." ORDER BY sip_ordre");
         
-        if($player_sips != null)
+        if(count($sip_actions)>0)
         {
-            $player_sips_infos = explode('_', $player_sips);
-            $player_id = $player_sips_infos[0];
-            $nb_splits = $player_sips_infos[1];
-            
             $players = self::loadPlayersBasicInfos();
-            
+            $sip = $sip_actions[0];
             return array(
                 "i18n" => array( 'player_name', 'nb_splits'),
-                "player_name" => $players[$player_id]['player_name'],
-                "nb_splits" => $nb_splits
+                "player_name" => $players[$sip['id']]['player_name'],
+                "nb_splits" => $sip['nb']
             );
-        }     
+        }
     }
     /*
     
@@ -350,19 +468,50 @@ class PyramideQSG extends Table
         $this->gamestate->setAllPlayersMultiactive();
     }
     
-    function stAcceptOrLye()
+    
+    function stNextAcceptOrRefuse()
     {
-        $active_players = array();
+        $next_receiver_id = self::getUniqueValueFromDB( "SELECT sip_receiver_id id FROM sip ORDER BY sip_ordre LIMIT 1");
         
-        $rs_items = self::DbQuery( "SELECT player_id id FROM player
-                                                         WHERE player_sips IS NOT NULL");
-
-        while($news = mysql_fetch_assoc($rs_items))
+        
+        if($next_receiver_id != null)
         {
-            $active_players[] = $news['id'];
+            $this->gamestate->changeActivePlayer( $next_receiver_id );
+            self::giveExtraTime( $next_receiver_id );
+            $this->gamestate->nextState('acceptOrRefuse');
+            
         }
-        $this->gamestate->setPlayersMultiactive($active_players,'acceptOrLye');
+        else
+        {
+            $nbLevels = self::getGameStateValue( 'nbPyramidLevels' ) ;
+            $currentLevel = self::getGameStateValue( 'currentLevel' ) ;
+            
+            if($currentLevel == $nbLevels)
+                $this->gamestate->nextState('endGame');
+            else
+                $this->gamestate->nextState('showCard');
+        }
     }
+    
+    
+    function stNextProve()
+    {
+        $next_giver_id = self::getUniqueValueFromDB( "SELECT sip_giver_id id FROM sip  ORDER BY sip_ordre LIMIT 1");
+        
+        
+        if($next_giver_id != null)
+        {
+            $this->gamestate->changeActivePlayer( $next_giver_id );
+            self::giveExtraTime( $next_giver_id );
+            $this->gamestate->nextState('prove');
+            
+        }
+        else
+        {
+            $this->gamestate->nextState('nextAcceptOrRefuse');
+        }
+    }
+    
     
     function stShowCard()
     {
@@ -380,7 +529,9 @@ class PyramideQSG extends Table
         
         if($nbCardsHidden <= 1)
             self::incGameStateValue( 'currentLevel', 1 );
-        
+            
+        self::setGameStateValue( 'currentCardId', $cardToShow['id'] );
+            
         $sql = "UPDATE card SET card_show ='1'
                     WHERE card_id = ".$cardToShow['id'];
         
@@ -396,10 +547,7 @@ class PyramideQSG extends Table
             'value_displayed' => $this->values_label[ $cardToShow['type_arg'] ]
         ) );
         
-        if($currentLevel != $nbLevels)
-            $this->gamestate->nextState('showCard');
-            else
-                $this->gamestate->nextState('endGame');
+        $this->gamestate->nextState('showCard');
     }
     /*
     

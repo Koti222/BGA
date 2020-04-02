@@ -52,9 +52,28 @@
   	public function choosePlayer()
   	{
   	    self::setAjaxMode();
-  	    $from_player_id = self::getArg("from_player_id", AT_posint, true);
-  	    $to_player_id = self::getArg("to_player_id", AT_posint, true);
-  	    $this->game->choosePlayer($from_player_id, $to_player_id);
+  	    $giver_id = self::getArg("giver_id", AT_posint, true);
+  	    $receiver_id = self::getArg("receiver_id", AT_posint, true);
+  	    $this->game->choosePlayer($giver_id, $receiver_id);
+  	    self::ajaxResponse( );
+  	}
+  	
+  	public function acceptOrRefuse()
+  	{
+  	    self::setAjaxMode();
+  	    $giver_id = self::getArg("giver_id", AT_posint, true);
+  	    $receiver_id = self::getArg("receiver_id", AT_posint, true);
+  	    $accept = self::getArg("accept", AT_bool, true);
+  	    $this->game->acceptOrRefuse($giver_id, $receiver_id, $accept);
+  	    self::ajaxResponse( );
+  	}
+  	
+  	public function prove()
+  	{
+  	    self::setAjaxMode();
+  	    $giver_id = self::getArg("giver_id", AT_posint, true);
+  	    $card_id = self::getArg("card_id", AT_posint, true);
+  	    $this->game->prove($giver_id, $card_id);
   	    self::ajaxResponse( );
   	}
     /*

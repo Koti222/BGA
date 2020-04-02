@@ -21,7 +21,6 @@
 -- Example 1: create a standard "card" table to be used with the "Deck" tools (see example game "hearts"):
 
 -- add info about first player
-ALTER TABLE `player` ADD `player_sips` varchar(255);
 
 
 CREATE TABLE IF NOT EXISTS `card` (
@@ -34,14 +33,13 @@ CREATE TABLE IF NOT EXISTS `card` (
   PRIMARY KEY (`card_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
 
--- CREATE TABLE IF NOT EXISTS `card` (
---   `card_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
---   `card_type` varchar(16) NOT NULL,
---   `card_type_arg` int(11) NOT NULL,
---   `card_location` varchar(16) NOT NULL,
---   `card_location_arg` int(11) NOT NULL,
---   PRIMARY KEY (`card_id`)
--- ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
+CREATE TABLE IF NOT EXISTS `sip` (
+  `sip_giver_id` int(10) unsigned NOT NULL,
+  `sip_receiver_id` int(10) unsigned NOT NULL,
+  `sip_nb` int(10) NOT NULL DEFAULT '1',
+  `sip_ordre` int(10) unsigned NOT NULL DEFAULT 0,
+  PRIMARY KEY (`sip_giver_id`,`sip_receiver_id`)
+) ENGINE=InnoDB;
 
 
 -- Example 2: add a custom field to the standard "player" table

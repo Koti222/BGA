@@ -23,6 +23,7 @@ define([
 ],
 function (dojo, declare) {
     return declare("bgagame.pyramideqsg", ebg.core.gamegui, {
+    	
         constructor: function(){
             console.log('pyramideqsg constructor');
               
@@ -31,9 +32,8 @@ function (dojo, declare) {
             // this.myGlobalValue = 0;
             this.cardwidth = 72;
             this.cardheight = 96;
-            this.sips = [];
-            
-
+            this.received_sips = [];
+            this.given_sips = [];
         },
         
         /*
@@ -103,6 +103,11 @@ function (dojo, declare) {
                 console.log(card);
                 this.placeCardOnPyramid( levelID, color, value, card['card_id'], card['card_show'] == '1' );
             }
+            
+
+            this.received_sips = this.gamedatas.received_sips;
+            this.given_sips = this.gamedatas.given_sips;
+            
             //this.addTooltipToClass( "playertablecard", _("Card played on the table"), '' );
  
             // Setup game notifications to handle (see "setupNotifications" method below)
@@ -196,9 +201,9 @@ function (dojo, declare) {
                      this.addActionButton( 'pass_button', _('Pass'), 'onPass' ); 
                     break;
                     
-                case 'acceptOrLye':
-                    this.addActionButton( 'accept_button', _('Accept'),'onAcceptDrink' );  
-                    this.addActionButton( 'refuse_button', _('Refuse'), 'onRefuseDrink' ); 
+                case 'acceptOrRefuse':
+                    this.addActionButton( 'accept_button', _('Accept'),'onAcceptOrRefuse' );  
+                    this.addActionButton( 'refuse_button', _('Refuse'), 'onAcceptOrRefuse' ); 
                    break;
 /*               
                  Example:
@@ -225,11 +230,6 @@ function (dojo, declare) {
             script.
         
         */
-        
-        setSips: function(player_id, nb_sips) 
-        {
-            this.sips.push({player_id: player_id, nb_sips: nb_sips});        
-        },
         
         // Get card unique identifier based on its color and value
         getCardUniqueId: function( color, value )
@@ -335,66 +335,62 @@ function (dojo, declare) {
 
                 var buttonName = evt.target.id.split('_');
                 var target_player_id = buttonName[2];
+                
             	this.ajaxcall( "/pyramideqsg/pyramideqsg/choosePlayer.html", {
-		            						from_player_id: this.player_id,
-		            						to_player_id: target_player_id,
+		            						giver_id: this.player_id,
+		            						receiver_id: target_player_id,
 		                                    lock: true 
-		                                    }, this, function( result ) {  }, function( is_error) { } );   
+		                                    }, this, function( result ) {  }, function( is_error) { } );
             	
             }        
         },
         
 
-        onAcceptDrink: function(evt)
+        onAcceptOrRefuse: function(evt)
         {
             
-            if( this.checkAction( 'acceptOrLye' ) )
+            if( this.checkAction('acceptOrRefuse') )
             {
 
                 // Stop this event propagation
                 evt.preventDefault();
 
-            	console.log('onAcceptDrink');
-            	console.log(this.sips);
-                for(var sip in this.sips)
-                {
-                	console.log(sip);
-                }
-                
-                this.ajaxcall( "/pyramideqsg/pyramideqsg/ready.html", {
-					
-					action_name: 'pass',
+                var accept = evt.target.id == 'accept_button';
+                var current_sip = this.received_sips[0];
+                console.log('onAcceptOrRefuse');
+                console.log(this.received_sips);
+                console.log(current_sip);
+                this.ajaxcall( "/pyramideqsg/pyramideqsg/acceptOrRefuse.html", {
+                	giver_id: current_sip['giver_id'],
+                	receiver_id: this.player_id,
+                	accept: accept,
                     lock: true 
                     }, this, function( result ) {  }, function( is_error) { } );    
             }        
         },
         
-        onRefuseDrink: function(evt)
-        {
-            
-            if( this.checkAction( 'acceptOrLye' ) )
-            {
-
-                // Stop this event propagation
-                evt.preventDefault();
-
-            	console.log('onRefuseDrink');
-                for(var sip in this.sips)
-                {
-                	console.log(sip);
-                }
-                
-                this.ajaxcall( "/pyramideqsg/pyramideqsg/ready.html", {
-					
-					action_name: 'pass',
-                    lock: true 
-                    }, this, function( result ) {  }, function( is_error) { } );    
-            }        
-        },
-        
-        onPlayerHandSelectionChanged : function() 
+        onPlayerHandSelectionChanged : function(evt) 
 		{
             var items = this.playerHand.getSelectedItems();
+
+            if( items.length > 0 )
+            {
+                if( this.checkAction( 'prove', true ) )
+                {
+                    // Can play a card
+                    
+                    var card_id = items[0].id;
+                    
+                    console.log('onPlayerHandSelectionChanged');
+                    this.ajaxcall( "/pyramideqsg/pyramideqsg/prove.html", { 
+                    		giver_id: this.player_id,
+                    		card_id: card_id,
+                            lock: true 
+                            }, this, function( result ) {  }, function( is_error) { } );                        
+                }           
+            }
+            
+            this.playerHand.unselectAll();
         },
         /* Example:
         
@@ -449,6 +445,10 @@ function (dojo, declare) {
 
             dojo.subscribe( 'showCard', this, "notif_showCard" );
             dojo.subscribe( 'choosePlayer', this, "notif_choosePlayer" );
+            dojo.subscribe( 'accept', this, "notif_accept" );
+            dojo.subscribe( 'refuse', this, "notif_refuse" );
+            dojo.subscribe( 'prove', this, "notif_prove" );
+            dojo.subscribe( 'lye', this, "notif_lye" );
             // TODO: here, associate your game notifications with local methods
             
             // Example 1: standard notification handling
@@ -472,14 +472,55 @@ function (dojo, declare) {
         
         notif_choosePlayer: function( notif )
         {
-            console.log(this.player_id);
-            console.log(notif.args.to_player['player_id']);
-            console.log(this.player_id == notif.args.to_player['player_id']);
-        	if(this.player_id == notif.args.to_player['player_id'])
+        	if(this.player_id == notif.args.receiver['player_id'])
         	{
-        		this.setSips(notif.args.from_player['player_id'], notif.args.nbSips);
-                console.log( notif.args.from_player);
+        		this.received_sips.push({
+        			giver_id: notif.args.giver['player_id'],
+        			nb_sips: notif.args.nb_Sips
+        		});
         	}
+        	if(this.player_id == notif.args.giver['player_id'])
+        	{
+        		this.given_sips.push({
+        			receiver_id: notif.args.receiver['player_id'],
+        			nb_sips: notif.args.nb_Sips
+        		});
+        	}
+        },
+        
+
+        notif_accept: function( notif )
+        {
+        	if(this.player_id == notif.args.receiver['player_id'])
+        	{
+        		var msg = dojo.string.substitute( _("You must drink ${sip} !"), {
+        			sip: notif.args.nb_sips,
+        		} );
+        		this.showMessage( msg, "info" )
+        		delete this.received_sips[notif.args.giver['player_id']];
+        	}
+        	else if(this.player_id == notif.args.giver['player_id'])
+        	{
+        		delete this.given_sips[notif.args.receiver['player_id']];
+        	}
+        },
+        
+
+        notif_refuse: function( notif )
+        {
+
+        	if(this.player_id == notif.args.receiver['player_id'])
+        	{
+        		delete this.received_sips[notif.args.giver['player_id']];
+        	}
+        },
+        
+        notif_prove: function( notif )
+        {
+        },
+        
+        notif_lye: function( notif )
+        {
         },
         /*
         Example:
