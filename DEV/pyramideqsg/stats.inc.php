@@ -72,10 +72,18 @@ $stats_type = array(
     
     // Statistics existing for each player
     "player" => array(
-
-        "turns_number" => array("id"=> 10,
-                    "name" => totranslate("Number of turns"),
-                    "type" => "int" ),
+        
+        "nbLies" => array(   "id"=> 10,
+            "name" => totranslate("Total of lies"),
+            "type" => "int" ),
+        
+        "nbProofs" => array(   "id"=> 11,
+            "name" => totranslate("Total of proofs"),
+            "type" => "int" ),
+        
+        "nbErrors" => array(   "id"=> 12,
+            "name" => totranslate("Total of errors"),
+            "type" => "int" ),
     
 /*
         Examples:    

@@ -34,6 +34,7 @@ function (dojo, declare) {
             this.cardheight = 96;
             this.received_sips = [];
             this.given_sips = [];
+            this.locked_cards = [];
         },
         
         /*
@@ -88,6 +89,10 @@ function (dojo, declare) {
                 var card = this.gamedatas.hand[i];
                 var color = card.type;
                 var value = card.type_arg;
+                if(card.locked) 
+                {
+                	this.locked_cards.push(card.id);
+                }
                 this.playerHand.addToStockWithId( this.getCardUniqueId( color, value ), card.id );
             }
             
@@ -198,14 +203,19 @@ function (dojo, declare) {
                 		 var player = this.gamedatas.players[player_id];
                          this.addActionButton( 'choosePlayer_button_' + player_id,player['player_name'], 'onChoosePlayer' ); 
                      } 
-                     this.addActionButton( 'pass_button', _('Pass'), 'onPass' ); 
+                     this.addActionButton( 'pass_button', _('Pass'), 'onPassChoose' ); 
                     break;
                     
                 case 'acceptOrRefuse':
                     this.addActionButton( 'accept_button', _('Accept'),'onAcceptOrRefuse' );  
                     this.addActionButton( 'refuse_button', _('Refuse'), 'onAcceptOrRefuse' ); 
                    break;
+
+                case 'prove':
+                    this.addActionButton( 'passProve_button', _('Pass'), 'onPassProve' ); 
+                   break;
 /*               
+ * 
                  Example:
  
                  case 'myGameState':
@@ -294,13 +304,12 @@ function (dojo, declare) {
         {
             if( this.checkAction( 'lookCards' ) )
             {
+            	console.log("onLookCards");
             	this.confirmationDialog( _('Are you sure you memorise your cards ?'), 
             			
             			dojo.hitch( this, function() 
             					{
 		            				this.ajaxcall( "/pyramideqsg/pyramideqsg/ready.html", {
-		            						
-		            						action_name: 'lookCards',
 		                                    lock: true 
 		                                    }, this, function( result ) {  }, function( is_error) { } );                    
             					} 
@@ -312,13 +321,13 @@ function (dojo, declare) {
             }        
         },
         
-        onPass: function()
+
+        onPassChoose: function()
         {
             if( this.checkAction( 'pass' ) )
             {
-            	this.ajaxcall( "/pyramideqsg/pyramideqsg/ready.html", {
-		            						
-		            						action_name: 'pass',
+            	console.log("onPassChoose");
+            	this.ajaxcall( "/pyramideqsg/pyramideqsg/pass.html", {
 		                                    lock: true 
 		                                    }, this, function( result ) {  }, function( is_error) { } );    
             }        
@@ -369,6 +378,18 @@ function (dojo, declare) {
             }        
         },
         
+        onPassProve: function()
+        {
+            if( this.checkAction( 'prove' ) )
+            {
+                this.ajaxcall( "/pyramideqsg/pyramideqsg/prove.html", { 
+            		giver_id: this.player_id,
+            		card_id: -1,
+                    lock: true 
+                    }, this, function( result ) {  }, function( is_error) { } );   
+            }        
+        },
+        
         onPlayerHandSelectionChanged : function(evt) 
 		{
             var items = this.playerHand.getSelectedItems();
@@ -380,18 +401,29 @@ function (dojo, declare) {
                     // Can play a card
                     
                     var card_id = items[0].id;
-                    
-                    console.log('onPlayerHandSelectionChanged');
-                    this.ajaxcall( "/pyramideqsg/pyramideqsg/prove.html", { 
-                    		giver_id: this.player_id,
-                    		card_id: card_id,
-                            lock: true 
-                            }, this, function( result ) {  }, function( is_error) { } );                        
+
+                    if (locked_cards.includes(card_id))
+                    {
+                		var msg =  _('This card is new or was already used.');
+                		this.showMessage( msg, "error" );
+                    }
+                    else
+                    {
+                        console.log('onPlayerHandSelectionChanged');
+                        this.ajaxcall( "/pyramideqsg/pyramideqsg/prove.html", { 
+                        		giver_id: this.player_id,
+                        		card_id: card_id,
+                                lock: true 
+                                }, this, function( result ) {  }, function( is_error) { } );      
+                    }
+                                      
                 }           
             }
             
             this.playerHand.unselectAll();
         },
+        
+        
         /* Example:
         
         onMyMethodToCall1: function( evt )
@@ -448,7 +480,8 @@ function (dojo, declare) {
             dojo.subscribe( 'accept', this, "notif_accept" );
             dojo.subscribe( 'refuse', this, "notif_refuse" );
             dojo.subscribe( 'prove', this, "notif_prove" );
-            dojo.subscribe( 'lye', this, "notif_lye" );
+            dojo.subscribe( 'lye', this, "notif_lye" );;
+            dojo.subscribe( 'lockAllCards', this, "notif_lockAllCards" );
             // TODO: here, associate your game notifications with local methods
             
             // Example 1: standard notification handling
@@ -464,9 +497,26 @@ function (dojo, declare) {
         
         // TODO: from this point and below, you can write your game notifications handling methods
 
+        notif_lockAllCards:function(notif)
+        {
+        	console.log("notif_lockAllCards");
+        	if(notif.args.locked)
+        	{
+        		var items = this.playerHand.items;
+        		for(var item in items)
+        		{
+        			if(!this.locked_cards.includes(item['id']))
+        				this.locked_cards.push(item['id']);
+        		}
+        	}
+        	else
+        	{
+        		this.locked_cards = [];
+        	}
+        },
+        
         notif_showCard: function( notif )
         {
-            console.log( 'notif_showCard ' + notif.args.card_id + 'fggfd');
             this.setvisibilityCard(notif.args.card_id,notif.args.color, notif.args.value, true);
         },
         

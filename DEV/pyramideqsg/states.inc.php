@@ -78,7 +78,7 @@ $machinestates = array(
         "description" => '',
         "type" => "game",
         "action" => "stShowCard",
-        "transitions" => array( "showCard" => 30 ,  "endHand" => 99 )
+        "transitions" => array( "showCard" => 30 ,  "endGame" => 99 )
     ),
     
     
@@ -87,9 +87,9 @@ $machinestates = array(
         "description" => clienttranslate('All players must choose a player or pass.'),
         "descriptionmyturn" => clienttranslate('${you} must choose a player or pass.'),
         "type" => "multipleactiveplayer",
-        "action" => "stLookCards",
+        "action" => "stchoosePlayer",
         "possibleactions" => array( "choosePlayer", "pass" ),
-        "transitions" => array( "choosePlayer" => 32, "pass" => 32)
+        "transitions" => array( "choosePlayer" => 32, "pass" => 32, 'showCard' => 20)
     ),
     
     32 => array(
@@ -97,7 +97,7 @@ $machinestates = array(
         "description" => "",
         "type" => "game",
         "action" => "stNextAcceptOrRefuse",
-        "transitions" => array( "acceptOrRefuse" => 40, 'showCard' => 30,  "endHand" => 99 )
+        "transitions" => array( "acceptOrRefuse" => 40, 'choosePlayer' => 30,  "endGame" => 99 )
     ), 
     
     40 => array(
@@ -115,13 +115,13 @@ $machinestates = array(
         "description" => "",
         "type" => "game",
         "action" => "stNextProve",
-        "transitions" => array( "prove" => 40 , "nextAcceptOrRefuse" => 32)
+        "transitions" => array( "prove" => 50, "nextAcceptOrRefuse" => 32)
     ), 
     
     50 => array(
         "name" => "prove",
-        "description" => clienttranslate('Some players must prove they have the good cards.'),
-        "descriptionmyturn" => clienttranslate('${you} must show your card(s).Select'),
+        "description" => clienttranslate('Some players must prove they have the right card.'),
+        "descriptionmyturn" => clienttranslate('${you} must show the right card or pass.'),
         "type" => "activeplayer",
         "possibleactions" => array( "prove", "pass" ),
         "transitions" => array( "" => 32)

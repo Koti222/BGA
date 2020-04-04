@@ -44,8 +44,13 @@
   	public function ready()
   	{
   	    self::setAjaxMode();
-  	    $action_name = self::getArg("action_name", AT_alphanum, true);
-  	    $this->game->ready($action_name);
+  	    $this->game->ready();
+  	    self::ajaxResponse( );
+  	}
+  	public function pass()
+  	{
+  	    self::setAjaxMode();
+  	    $this->game->pass();
   	    self::ajaxResponse( );
   	}
   	
@@ -72,7 +77,7 @@
   	{
   	    self::setAjaxMode();
   	    $giver_id = self::getArg("giver_id", AT_posint, true);
-  	    $card_id = self::getArg("card_id", AT_posint, true);
+  	    $card_id = self::getArg("card_id", AT_int, true);
   	    $this->game->prove($giver_id, $card_id);
   	    self::ajaxResponse( );
   	}
