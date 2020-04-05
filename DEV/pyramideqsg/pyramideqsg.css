@@ -53,29 +53,60 @@
 
 /*** cards on table ***/
 
-.cardontable, .playertable 
+#table
 {
-    -moz-box-sizing:    border-box;
-    -webkit-box-sizing: border-box;
-    box-sizing:        border-box;
+	position: relative;
+    height: 350px;
+    display: table;
 }
 
-.playertable 
+#pyramidtable
+{
+	width: 60%;
+	display: table-cell;
+}
+
+#playertablename {
+    font-weight: bold;
+}
+
+
+#tableprove
+{
+	display: table-cell;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.pyramidLevel 
 {
     text-align: center;
-    overflow: hidden;
     padding: 1% 0 0 1%;
-    width: auto;
-    height: 110px;
 }
 
-.cardontable 
+.cardOnPyramid 
 {
     display: inline-block;
-    float: center;
     margin: 0 1% 1% 0;
     width: 72px;
     height: 96px;
+}
+
+.cardOnProve
+{
+    width: 72px;
+    height: 96px;
+    position : absolute;
+}
+
+
+.playertablecard {
+    display: inline-block;
+    position: relative;
+    margin-top: 5px;
+    width: 72px;
+    height: 96px;
+    align-content: center;
 }
 
 

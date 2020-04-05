@@ -33,8 +33,8 @@ function (dojo, declare) {
             this.cardwidth = 72;
             this.cardheight = 96;
             this.received_sips = [];
-            this.given_sips = [];
-            this.locked_cards = [];
+            this.given_sips = null;
+            this.currentLevel = 1;
         },
         
         /*
@@ -58,7 +58,6 @@ function (dojo, declare) {
             for( var player_id in gamedatas.players )
             {
                 var player = gamedatas.players[player_id];
-                         
                 // TODO: Setting up players boards if needed
             }
             
@@ -78,9 +77,11 @@ function (dojo, declare) {
                 {
                     // Build card type id
                     var card_type_id = this.getCardUniqueId( color, value );
-                    this.playerHand.addItemType( card_type_id, card_type_id, g_gamethemeurl+'img/cards.jpg', card_type_id );
+                    this.playerHand.addItemType( card_type_id, 0, g_gamethemeurl+'img/cards.jpg', card_type_id );
                 }
             }
+            this.playerHand.addItemType( 52, 52, g_gamethemeurl+'img/dos.jpg', 0 );
+            
             console.log( "avant1 " + this.gamedatas.hand);
             
             // Cards in player's hand
@@ -89,29 +90,28 @@ function (dojo, declare) {
                 var card = this.gamedatas.hand[i];
                 var color = card.type;
                 var value = card.type_arg;
-                if(card.locked) 
-                {
-                	this.locked_cards.push(card.id);
-                }
                 this.playerHand.addToStockWithId( this.getCardUniqueId( color, value ), card.id );
             }
+            console.log('playerHand');
+            console.log(this.playerHand);
+            
+            //create levels of pyramid
+            this.createPyramidLevels(this.gamedatas.nbPyramidLevels);
             
             // Cards played on table
-
-            console.log(this.gamedatas.pyramid);
             for(var i in this.gamedatas.pyramid)
             {
                 var card = this.gamedatas.pyramid[i];
                 var color = card['card_type'];
                 var value = card['card_type_arg'];
                 var levelID = card['card_location_arg'];
-                console.log(card);
                 this.placeCardOnPyramid( levelID, color, value, card['card_id'], card['card_show'] == '1' );
             }
             
 
             this.received_sips = this.gamedatas.received_sips;
             this.given_sips = this.gamedatas.given_sips;
+            this.currentLevel = this.gamedatas.currentLevel;
             
             //this.addTooltipToClass( "playertablecard", _("Card played on the table"), '' );
  
@@ -197,23 +197,26 @@ function (dojo, declare) {
                     
                 case 'choosePlayer':
                 	
-                	 for( var player_id in this.gamedatas.players )
-                     {
-                		 if(player_id == this.player_id) continue;
-                		 var player = this.gamedatas.players[player_id];
-                         this.addActionButton( 'choosePlayer_button_' + player_id,player['player_name'], 'onChoosePlayer' ); 
-                     } 
-                     this.addActionButton( 'pass_button', _('Pass'), 'onPassChoose' ); 
+					for( var player_id in this.gamedatas.players )
+					{
+						 if(player_id == this.player_id) continue;
+						 var player = this.gamedatas.players[player_id];
+						 for (var i = 1; i < 4; i++) 
+						 {
+					         this.addActionButton( 'choosePlayer_button_' + player_id + "_" + i,player['name'] + "(x" + i + ")", 'onChoosePlayer' ); 
+						 }
+					} 
+					this.addActionButton( 'pass_button', _('Pass'), 'onPassChoose' ); 
                     break;
                     
                 case 'acceptOrRefuse':
                     this.addActionButton( 'accept_button', _('Accept'),'onAcceptOrRefuse' );  
                     this.addActionButton( 'refuse_button', _('Refuse'), 'onAcceptOrRefuse' ); 
-                   break;
+                    break;
 
                 case 'prove':
                     this.addActionButton( 'passProve_button', _('Pass'), 'onPassProve' ); 
-                   break;
+                    break;
 /*               
  * 
                  Example:
@@ -246,13 +249,25 @@ function (dojo, declare) {
         {
             return (color-1)*13+(value-2);
         },
+
+        createPyramidLevels : function(nbLevels) 
+		{
+        	console.log(nbLevels);
+        	for (var lvl = nbLevels; lvl> 0; lvl--)  
+        	{
+        		dojo.place(this.format_block('jstpl_levelPyramid', {
+                    level : lvl
+                }), 'pyramidtable');
+			}
+        	console.log(nbLevels);
+        },
         
         placeCardOnPyramid : function(lvl, color, value, card_id, show) 
 		{
         	
-            dojo.place(this.format_block('jstpl_cardontable', {
+            dojo.place(this.format_block('jstpl_cardOnPyramid', {
                 card_id : card_id
-            }), 'pyramidLevelCard_' + lvl);
+            }), 'pyramidLevel_' + lvl);
 
             console.log('dojo');
             
@@ -264,24 +279,15 @@ function (dojo, declare) {
         	console.log('setvisibilityCard');
 			if(show)
 			{
-            	console.log('pouleto 1 : ' + show);
-
-            	console.log('value 1 : ' + value);
-            	console.log('color 1 : ' + color);
-            	
     			var x = -this.cardwidth * (value - 2);
                 var y = -this.cardheight * (color - 1);
-                var tt = 
-    			dojo.style( 'cardontable_' + card_id, 'backgroundPosition', x+'px '+y+'px' );
-    			dojo.removeClass('cardontable_' + card_id, 'cardhide');
-    			dojo.addClass('cardontable_' + card_id, 'cardshow');
+    			dojo.style( 'cardOnPyramid_' + card_id, 'backgroundPosition', x+'px '+y+'px' );
+    			dojo.replaceClass('cardOnPyramid_' + card_id,'cardshow', 'cardhide');
 			}
 			else
 			{
-            	console.log('pouleto 0 : ' + show);
-    			dojo.style( 'cardontable_' + card_id, 'backgroundPosition', '0px 0px' );
-    			dojo.removeClass('cardontable_' + card_id, 'cardshow');
-    			dojo.addClass('cardontable_' + card_id, 'cardhide');
+    			dojo.style( 'cardOnPyramid_' + card_id, 'backgroundPosition', '0px 0px' );
+    			dojo.replaceClass('cardOnPyramid_' + card_id,'cardhide', 'cardshow');
 			}
         },
 
@@ -343,11 +349,13 @@ function (dojo, declare) {
                 evt.preventDefault();
 
                 var buttonName = evt.target.id.split('_');
-                var target_player_id = buttonName[2];
+                var target_player_id = buttonName[2];;
+                var nb_cartes = buttonName[3];
                 
             	this.ajaxcall( "/pyramideqsg/pyramideqsg/choosePlayer.html", {
 		            						giver_id: this.player_id,
 		            						receiver_id: target_player_id,
+		            						nb_cartes: nb_cartes,
 		                                    lock: true 
 		                                    }, this, function( result ) {  }, function( is_error) { } );
             	
@@ -366,9 +374,6 @@ function (dojo, declare) {
 
                 var accept = evt.target.id == 'accept_button';
                 var current_sip = this.received_sips[0];
-                console.log('onAcceptOrRefuse');
-                console.log(this.received_sips);
-                console.log(current_sip);
                 this.ajaxcall( "/pyramideqsg/pyramideqsg/acceptOrRefuse.html", {
                 	giver_id: current_sip['giver_id'],
                 	receiver_id: this.player_id,
@@ -384,7 +389,7 @@ function (dojo, declare) {
             {
                 this.ajaxcall( "/pyramideqsg/pyramideqsg/prove.html", { 
             		giver_id: this.player_id,
-            		card_id: -1,
+            		card_ids: "",
                     lock: true 
                     }, this, function( result ) {  }, function( is_error) { } );   
             }        
@@ -394,33 +399,45 @@ function (dojo, declare) {
 		{
             var items = this.playerHand.getSelectedItems();
 
-            if( items.length > 0 )
+            if( this.checkAction( 'prove', true ) && this.given_sips != null)
             {
-                if( this.checkAction( 'prove', true ) )
-                {
-                    // Can play a card
-                    
-                    var card_id = items[0].id;
+            	console.log('onPlayerHandSelectionChanged');
 
-                    if (locked_cards.includes(card_id))
-                    {
-                		var msg =  _('This card is new or was already used.');
-                		this.showMessage( msg, "error" );
-                    }
-                    else
-                    {
-                        console.log('onPlayerHandSelectionChanged');
-                        this.ajaxcall( "/pyramideqsg/pyramideqsg/prove.html", { 
-                        		giver_id: this.player_id,
-                        		card_id: card_id,
-                                lock: true 
-                                }, this, function( result ) {  }, function( is_error) { } );      
-                    }
-                                      
+            	console.log('level ' + this.currentLevel);
+            	
+
+            	console.log(this.given_sips);
+            	
+	            var nbCards = this.given_sips['nb_sips']/this.currentLevel;
+
+            	console.log('nbCards ' + nbCards);
+	            if( items.length == nbCards )
+	            {
+                    var card_ids = "";
+	            	for (var i = 0; i < nbCards; i++) 
+	                    var card_ids = card_ids + items[i].id + ";";
+	            	
+                	this.playerHand.unselectAll(); 
+                	
+                    // Can play a card
+	            	this.confirmationDialog( _('Are you sure of your cards ?'), 
+	            			
+	            			dojo.hitch( this, function() 
+	            					{
+	            						
+			                            console.log('onPlayerHandSelectionChanged');
+			                            this.ajaxcall( "/pyramideqsg/pyramideqsg/prove.html", { 
+			                            		giver_id: this.player_id,
+			                            		card_ids: card_ids,
+			                                    lock: true 
+			                                    }, this, function( result ) {  }, function( is_error) { } );                 
+	            					} 
+	            			
+	            			) );             
                 }           
             }
-            
-            this.playerHand.unselectAll();
+            else
+            	this.playerHand.unselectAll();
         },
         
         
@@ -480,8 +497,10 @@ function (dojo, declare) {
             dojo.subscribe( 'accept', this, "notif_accept" );
             dojo.subscribe( 'refuse', this, "notif_refuse" );
             dojo.subscribe( 'prove', this, "notif_prove" );
-            dojo.subscribe( 'lye', this, "notif_lye" );;
-            dojo.subscribe( 'lockAllCards', this, "notif_lockAllCards" );
+            this.notifqueue.setSynchronous( 'prove', 3000 );
+            dojo.subscribe( 'lye', this, "notif_lye" );
+            this.notifqueue.setSynchronous( 'lye', 3000 );
+            dojo.subscribe( 'newCards', this, "notif_newCards" );
             // TODO: here, associate your game notifications with local methods
             
             // Example 1: standard notification handling
@@ -497,26 +516,9 @@ function (dojo, declare) {
         
         // TODO: from this point and below, you can write your game notifications handling methods
 
-        notif_lockAllCards:function(notif)
-        {
-        	console.log("notif_lockAllCards");
-        	if(notif.args.locked)
-        	{
-        		var items = this.playerHand.items;
-        		for(var item in items)
-        		{
-        			if(!this.locked_cards.includes(item['id']))
-        				this.locked_cards.push(item['id']);
-        		}
-        	}
-        	else
-        	{
-        		this.locked_cards = [];
-        	}
-        },
-        
         notif_showCard: function( notif )
         {
+        	this.currentLevel = notif.args.currentLevel;
             this.setvisibilityCard(notif.args.card_id,notif.args.color, notif.args.value, true);
         },
         
@@ -526,21 +528,22 @@ function (dojo, declare) {
         	{
         		this.received_sips.push({
         			giver_id: notif.args.giver['player_id'],
-        			nb_sips: notif.args.nb_Sips
+        			nb_sips: notif.args.nb_sips
         		});
         	}
         	if(this.player_id == notif.args.giver['player_id'])
         	{
-        		this.given_sips.push({
+        		this.given_sips = {
         			receiver_id: notif.args.receiver['player_id'],
-        			nb_sips: notif.args.nb_Sips
-        		});
+        			nb_sips: notif.args.nb_sips
+        		};
         	}
         },
         
 
         notif_accept: function( notif )
-        {
+        {  
+        	this.scoreCtrl[ notif.args.receiver['player_id']].incValue(notif.args.nb_sips);
         	if(this.player_id == notif.args.receiver['player_id'])
         	{
         		var msg = dojo.string.substitute( _("You must drink ${sip} !"), {
@@ -551,7 +554,7 @@ function (dojo, declare) {
         	}
         	else if(this.player_id == notif.args.giver['player_id'])
         	{
-        		delete this.given_sips[notif.args.receiver['player_id']];
+        		this.given_sips = null;
         	}
         },
         
@@ -567,10 +570,132 @@ function (dojo, declare) {
         
         notif_prove: function( notif )
         {
+        	this.scoreCtrl[ notif.args.receiver['player_id']].incValue(notif.args.nb_sips);
+        	
+        	var player_id = notif.args.giver['player_id']
+        	for( var i in notif.args.giver_cards)
+            {
+                var card = notif.args.giver_cards[i];
+                var color = card.type;
+                var value = card.type_arg;
+                
+             // player_id => direction
+                dojo.place(
+                    this.format_block( 'jstpl_CardProve', {
+                        x: this.cardwidth*(value-2),
+                        y: this.cardheight*(color-1),
+                        index: i                
+                    } ), 'playertablecard_' + i);
+                    
+                if( player_id != this.player_id )
+                {
+                    // Some opponent played a card
+                    // Move card from player panel
+                    this.placeOnObject( 'cardProve_'+i, 'overall_player_board_'+player_id );
+                }
+                else
+                {
+                    // You played a card. If it exists in your hand, move card from there and remove
+                    // corresponding item
+                    
+                    if( $('myhand_item_'+card.id) )
+                    {
+                        this.placeOnObject( 'cardProve_'+i, 'myhand_item_'+card.id );
+                        this.playerHand.removeFromStockById( card.id );
+                    }
+                }
+
+                // In any case: move it to its final destination
+                this.slideToObject( 'cardProve_'+i, 'playertablecard_' + i).play();
+        	}
         },
         
         notif_lye: function( notif )
         {
+        	this.scoreCtrl[ notif.args.giver['player_id']].incValue(notif.args.nb_sips);
+        	
+        	var player_id = notif.args.giver['player_id']
+        	var index = 1;
+        	var anims = [];
+
+            dojo.style( 'playertablename', 'color', '#' + notif.args.giver_color );
+        	$('playertablename').innerHTML = notif.args.giver_name;
+        	
+        	for( var i in notif.args.giver_cards)
+            {
+                var card = notif.args.giver_cards[i];
+                var color = card.type;
+                var value = card.type_arg;
+                console.log(i);
+             // player_id => direction
+                dojo.place(
+                    this.format_block( 'jstpl_CardProve', {
+                        x: this.cardwidth*(value-2),
+                        y: this.cardheight*(color-1),
+                        index: index                
+                    } ), 'playertablecard_' + index);
+                    
+                if( player_id != this.player_id )
+                {
+                    // Some opponent played a card
+                    // Move card from player panel
+                    this.placeOnObject( 'cardProve_'+index, 'overall_player_board_'+player_id );
+                }
+                else
+                {
+                    // You played a card. If it exists in your hand, move card from there and remove
+                    // corresponding item
+                    
+                    if( $('myhand_item_'+card.id) )
+                    {
+                        this.placeOnObject( 'cardProve_'+index, 'myhand_item_'+card.id );
+                        this.playerHand.removeFromStockById( card.id );
+                    }
+                }
+
+                // In any case: move it to its final destination
+                anims.push(this.slideToObject( 'cardProve_'+index, 'playertablecard_' + index,1000, (index-1)*300));
+                //anims.push(this.slideToObjectAndDestroy( 'cardProve_'+index, 'playertablecard_' + index,1000, (index-1)*300));
+               
+                index++;
+        	}
+        	 dojo.fx.combine(anims).play();
+        	 
+        	 
+
+         	$('playertablename').innerHTML = notif.args.giver_name;
+        	 
+        	 if( player_id == this.player_id )
+        	 {
+        		 for( var i in notif.args.giver_cards)
+                 {
+                     var card = notif.args.giver_cards[i];
+                     var color = card.type;
+                     var value = card.type_arg;
+                     this.playerHand.addToStockWithId( this.getCardUniqueId( color, value ), card.id );
+                 }
+        	 }
+        },
+        
+        notif_newCards: function( notif )
+        {
+
+    		this.given_sips = null;
+    		
+    		console.log(notif.args.old_cards);
+            for( var i in notif.args.old_cards )
+            {
+                var card = notif.args.old_cards[i];
+                this.playerHand.removeFromStockById( card.id );
+        	}
+
+            for( var i in notif.args.new_cards )
+            {
+                var card = notif.args.new_cards[i];
+                var color = card.type;
+                var value = card.type_arg;
+                this.playerHand.addToStockWithId( this.getCardUniqueId( color, value ), card.id );
+        	}
         },
         /*
         Example:

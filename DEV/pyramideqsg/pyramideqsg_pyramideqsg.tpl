@@ -25,17 +25,30 @@
     Please REMOVE this comment before publishing your game on BGA
 -->
 
-
-<div id="pyramidtable" class= "whiteblock">
-	<h3>{PYRAMID}</h3>
+<div id="table">
 	
-    <!-- BEGIN pyramidLevel -->
-    <div class="pyramidLevel" id= "pyramidLevel_{LEVEL}">
-        <div class="playertable" id="pyramidLevelCard_{LEVEL}">
-    		
+	<div id="pyramidtable">
+		
+	
+	</div>
+	
+	<div id="tableprove" >
+		<div id="innertableProve" class="whiteblock">
+    		<h3>{PLAYER_BOARD} </BR></h3>
+	        <div id="playertablename">
+	        </div>
+	        <div class="playertablecard" id="playertablecard_1">
+	        </div>
+	        <div class="playertablecard" id="playertablecard_2">
+	        </div>
+	        <div class="playertablecard" id="playertablecard_3">
+	        </div>
+	        <div class="playertablecard" id="playertablecard_4">
+	        </div>
+	        <div id="result">
+	        </div>
         </div>
-    </div>
-    <!-- END pyramidLevel -->
+	</div>
 
 </div>
 
@@ -49,7 +62,11 @@
 
 // Javascript HTML templates
 
-var jstpl_cardontable = '<div class="cardontable" id="cardontable_${card_id}">\
+var jstpl_CardProve ='<div class="cardOnProve cardshow"  id= "cardProve_${index}" style="background-position:-${x}px -${y}px"></div>';
+
+var jstpl_levelPyramid ='<div class="pyramidLevel"  id= "pyramidLevel_${level}"></div>';
+
+var jstpl_cardOnPyramid = '<div class="cardOnPyramid" id="cardOnPyramid_${card_id}">\
                         </div>';
 /*
 // Example:

@@ -89,7 +89,7 @@ $machinestates = array(
         "type" => "multipleactiveplayer",
         "action" => "stchoosePlayer",
         "possibleactions" => array( "choosePlayer", "pass" ),
-        "transitions" => array( "choosePlayer" => 32, "pass" => 32, 'showCard' => 20)
+        "transitions" => array( "choosePlayer" => 32, "pass" => 32)
     ),
     
     32 => array(
@@ -97,7 +97,7 @@ $machinestates = array(
         "description" => "",
         "type" => "game",
         "action" => "stNextAcceptOrRefuse",
-        "transitions" => array( "acceptOrRefuse" => 40, 'choosePlayer' => 30,  "endGame" => 99 )
+        "transitions" => array( "acceptOrRefuse" => 40, 'showCard' => 20,  "endGame" => 99 )
     ), 
     
     40 => array(
@@ -120,9 +120,10 @@ $machinestates = array(
     
     50 => array(
         "name" => "prove",
-        "description" => clienttranslate('Some players must prove they have the right card.'),
-        "descriptionmyturn" => clienttranslate('${you} must show the right card or pass.'),
+        "description" => clienttranslate('Some players must prove they have the right cards.'),
+        "descriptionmyturn" => clienttranslate('${you} must show the ${nb_cards} card(s) or pass.'),
         "type" => "activeplayer",
+        "args" => "argProve",
         "possibleactions" => array( "prove", "pass" ),
         "transitions" => array( "" => 32)
     ),

@@ -39,24 +39,10 @@
 
         /*********** Place your code below:  ************/
         
-        $template = self::getGameName() . "_" . self::getGameName();
-        
-        $levels = 5;
-        
-        // this will inflate our player block with actual players data
-        $this->page->begin_block($template, "pyramidLevel");
-        
-        for ($lvl = $levels; $lvl> 0; $lvl--) 
-        {
-            $this->page->insert_block("pyramidLevel", array (
-                "LEVEL" => $lvl));
-            $nbCartes = $levels - $lvl + 1;
-        }
-        
-        
+        // this will make our My Hand text translatable
+        $this->tpl['PLAYER_BOARD'] = self::_("Player board");
         // this will make our My Hand text translatable
         $this->tpl['MY_HAND'] = self::_("My hand");
-        $this->tpl['PYRAMID'] = self::_("Pyramid");
 
         /*
         

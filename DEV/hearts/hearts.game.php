@@ -135,7 +135,7 @@ class Hearts extends Table
 
         // Get information about players
         // Note: you can retrieve some extra field you add for "player" table in "dbmodel.sql" if you need it.
-        $sql = "SELECT player_id id, player_score score ";
+        $sql = "SELECT player_id id, player_score score, player_color color ";
         $sql .= "FROM player ";
         $sql .= "WHERE 1 ";
         $dbres = self::DbQuery( $sql );

@@ -30,7 +30,6 @@ CREATE TABLE IF NOT EXISTS `card` (
   `card_location` varchar(16) NOT NULL,
   `card_location_arg` int(11) NOT NULL,
   `card_show` BOOLEAN NOT NULL DEFAULT '0',
-  `card_locked` BOOLEAN NOT NULL DEFAULT '0',
   PRIMARY KEY (`card_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
 

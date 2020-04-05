@@ -59,7 +59,8 @@
   	    self::setAjaxMode();
   	    $giver_id = self::getArg("giver_id", AT_posint, true);
   	    $receiver_id = self::getArg("receiver_id", AT_posint, true);
-  	    $this->game->choosePlayer($giver_id, $receiver_id);
+  	    $nb_cartes = self::getArg("nb_cartes", AT_posint, true);
+  	    $this->game->choosePlayer($giver_id, $receiver_id, $nb_cartes);
   	    self::ajaxResponse( );
   	}
   	
@@ -76,9 +77,19 @@
   	public function prove()
   	{
   	    self::setAjaxMode();
+  	    
   	    $giver_id = self::getArg("giver_id", AT_posint, true);
-  	    $card_id = self::getArg("card_id", AT_int, true);
-  	    $this->game->prove($giver_id, $card_id);
+  	    $card_ids_raw = self::getArg( "card_ids", AT_numberlist, true );
+  	    
+  	    // Removing last ';' if exists
+  	    if( substr( $card_ids_raw, -1 ) == ';' )
+  	        $card_ids_raw = substr( $card_ids_raw, 0, -1 );
+  	        if( $card_ids_raw == '' )
+  	            $card_ids = array();
+  	            else
+  	                $card_ids = explode( ';', $card_ids_raw );
+  	            
+  	    $this->game->prove($giver_id, $card_ids);
   	    self::ajaxResponse( );
   	}
     /*
