@@ -125,7 +125,16 @@ $machinestates = array(
         "type" => "activeplayer",
         "args" => "argProve",
         "possibleactions" => array( "prove", "pass" ),
-        "transitions" => array( "" => 32)
+        "transitions" => array( "lye" => 32, "prove" => 55)
+    ),
+    
+    55 => array(
+        "name" => "lookNewCards",
+        "description" => clienttranslate('Some players must memorise new cards.'),
+        "descriptionmyturn" => clienttranslate('${you} must memorise your new card(s).'),
+        "type" => "activeplayer",
+        "possibleactions" => array( "lookCards" ),
+        "transitions" => array( "lookCards" => 32 )
     ),
     
 /*

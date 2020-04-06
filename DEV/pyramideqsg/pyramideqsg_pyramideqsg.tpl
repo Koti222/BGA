@@ -62,7 +62,7 @@
 
 // Javascript HTML templates
 
-var jstpl_CardProve ='<div class="cardOnProve cardshow"  id= "cardProve_${index}" style="background-position:-${x}px -${y}px"></div>';
+var jstpl_CardProve ='<div class="cardOnProve cardshow"  id= "cardProve_${card_id}" style="background-position:-${x}px -${y}px"></div>';
 
 var jstpl_levelPyramid ='<div class="pyramidLevel"  id= "pyramidLevel_${level}"></div>';
 

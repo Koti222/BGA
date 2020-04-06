@@ -87,7 +87,7 @@ class PyramideQSG extends Table
         // Init global values with their initial values
         //self::setGameStateInitialValue( 'my_first_global_variable', 0 );
         
-        self::setGameStateInitialValue( 'nbPyramidLevels', 3 );
+        self::setGameStateInitialValue( 'nbPyramidLevels', 4 );
         self::setGameStateInitialValue( 'currentLevel', 1 );
         self::setGameStateInitialValue( 'currentCardId', 0 );
         
@@ -133,6 +133,12 @@ class PyramideQSG extends Table
         foreach ( $players as $player_id => $player ) 
         {
             $cards = $this->cards->pickCards(4, 'deck', $player_id);
+
+            for ($i = 0; $i < 4; $i++) 
+            {
+                $sql = "UPDATE card SET card_position =".($i+1).", card_show = 1 WHERE card_id = ".$cards[$i]['id'];
+                self::DbQuery( $sql );
+            }
         } 
 
 
@@ -169,7 +175,7 @@ class PyramideQSG extends Table
        
         $result['pyramid'] = self::getObjectListFromDB( $sql );
         
-        $sql = " SELECT card_id id, card_type type, card_type_arg type_arg  FROM card WHERE card_location = 'hand' and card_location_arg = ".$current_player_id;
+        $sql = " SELECT * FROM card WHERE card_location = 'hand' and card_location_arg = ".$current_player_id." ORDER BY card_position";
         // Cards in player hand
         $result['hand'] = self::getObjectListFromDB( $sql );
         
@@ -219,6 +225,11 @@ class PyramideQSG extends Table
         self::DbQuery( $sql );
     }
 
+    function getPosition($card_id)
+    {
+        $sql = "SELECT card_position FROM card WHERE card_id = ".$card_id;
+        return self::getUniqueValueFromDB( $sql );
+    }
 
 //////////////////////////////////////////////////////////////////////////////
 //////////// Player actions
@@ -234,6 +245,16 @@ class PyramideQSG extends Table
         self::checkAction( 'lookCards' );
         $player_id = self::getCurrentPlayerId();
         $this->gamestate->setPlayerNonMultiactive( $player_id, 'lookCards' );
+        
+        $sql = "UPDATE card SET card_show = 0 WHERE card_location = 'hand' AND card_location_arg = ".$player_id;
+        self::DbQuery( $sql );
+        
+        
+        $sql = "SELECT card_id id, card_position position FROM card WHERE card_location = 'hand' AND card_location_arg = ".$player_id;
+        $cards = self::getCollectionFromDB($sql, true);
+        self::notifyPlayer($player_id, 'ready','', array(
+            'cards'=>$cards
+        ));
     }
     
     function pass()
@@ -266,8 +287,8 @@ class PyramideQSG extends Table
         
         self::notifyAllPlayers( 'choosePlayer', clienttranslate('${giver_name} give ${nb_sips} sip(s) to ${receiver_name}.'), array(
             'i18n' => array( 'giver_name', 'receiver_name', 'nb_sips' ),
-            'giver' => $giver,
-            'receiver' => $receiver,
+            'giver_id' => $giver_id,
+            'receiver_id' => $receiver_id,
             'giver_name' => $giver['player_name'],
             'receiver_name' => $receiver['player_name'],
             'nb_sips' => $nb_sips
@@ -311,8 +332,8 @@ class PyramideQSG extends Table
                 
                 self::notifyAllPlayers( 'accept', clienttranslate('${receiver_name} accept ${nb_sips} sip(s) from ${giver_name}.'), array(
                     'i18n' => array( 'receiver_name', 'giver_name', 'nb_sips' ),
-                    'receiver' => $receiver,
-                    'giver' => $giver,
+                    'receiver_id' => $receiver_id,
+                    'giver_id' => $giver_id,
                     'giver_name' => $giver['player_name'],
                     'receiver_name' => $receiver['player_name'],
                     'nb_sips' => $nb_sips,
@@ -323,12 +344,12 @@ class PyramideQSG extends Table
             else
             {
                 self::notifyAllPlayers( 'refuse', clienttranslate('${receiver_name} refuse ${nb_sips} sip(s) from ${giver_name}.'), array(
-                'i18n' => array( 'receiver_name', 'giver_name', 'nb_sips' ),
-                'receiver' => $receiver,
-                'giver' => $giver,
-                'giver_name' => $giver['player_name'],
-                'receiver_name' => $receiver['player_name'],
-                'nb_sips' => $nb_sips,
+                    'i18n' => array( 'receiver_name', 'giver_name', 'nb_sips' ),
+                    'receiver_id' => $receiver_id,
+                    'giver_id' => $giver_id,
+                    'giver_name' => $giver['player_name'],
+                    'receiver_name' => $receiver['player_name'],
+                    'nb_sips' => $nb_sips,
                 ) );
                 
                 $this->gamestate->nextState( 'refuse' );  
@@ -351,13 +372,20 @@ class PyramideQSG extends Table
         
         $receiver = $players[$sip['receiver_id']];
         $giver = $players[$giver_id];
+        $needNewCards = false;
+        
         
         if($nb_Cards > 0)
         {
             $card_pyramid_id = self::getGameStateValue( 'currentCardId');
+            
             $card_pyramid = $this->cards->getCard($card_pyramid_id);
             
-            $cards_player = $this->cards->getCards($card_ids);
+            $sql = "SELECT card_id id, card_type type, card_type_arg type_arg, card_position position FROM card WHERE card_id IN(";
+            $sql .= implode( $card_ids, ',' );
+            $sql .= ") ORDER BY card_position";
+            
+            $cards_player = self::getCollectionFromDB($sql);
             
             $isSame = true;
             
@@ -378,8 +406,8 @@ class PyramideQSG extends Table
                 
                 self::notifyAllPlayers( 'prove', clienttranslate('${giver_name} has right cards and is not a lyer. ${receiver_name} must drink the double (${nb_sips} sips).'), array(
                     'i18n' => array( 'receiver_name', 'giver_name', 'nb_sips'),
-                    'receiver' => $receiver,
-                    'giver' => $giver,
+                    'receiver_id' => $receiver['player_id'],
+                    'giver_id' => $giver_id,
                     'giver_name' => $giver['player_name'],
                     'giver_color' => $giver['player_color'],
                     'receiver_name' => $receiver['player_name'],
@@ -388,15 +416,33 @@ class PyramideQSG extends Table
                     
                 ) );
                 
+                $needNewCards = true;
+                
+                self::notifyAllPlayers('clearPlayerBoard', '', array(
+                    'giver_id' => $giver_id,
+                    'giver_cards'=>$cards_player,
+                    'lye' => false
+                ) );
+                
+                
                 $new_cards = $this->cards->pickCards($nb_Cards, 'deck', $giver_id);
+                
+                $positions = array_column($cards_player, 'position');
+                
+                $new_cards_positions = array();
+                for ($i = 0; $i < $nb_Cards; $i++) 
+                {
+                    $new_cards_positions[] = array('position' => $positions[$i], 'card' => $new_cards[$i]);
+                    $sql = "UPDATE card SET card_show = 1, card_position = ".$positions[$i]." WHERE card_id =".$new_cards[$i]['id'];
+                    self::DbQuery( $sql );
+                }
                 $this->cards->moveCards( $card_ids, 'deck' );
                 // Shuffle deck
                 $this->cards->shuffle('deck');
                 
                 
                 self::notifyPlayer($giver_id, 'newCards', clienttranslate('You obtain a new cards.'), array(
-                    'new_cards'=>$new_cards,
-                    'old_cards'=>$cards_player
+                    'new_cards'=>$new_cards_positions,
                 ) );
             }
             else
@@ -409,12 +455,18 @@ class PyramideQSG extends Table
                 
                 self::notifyAllPlayers( 'lye', clienttranslate('${giver_name} is a lyer. He showed the wrong cards. ${giver_name} must drink the double (${nb_sips} sips).'), array(
                     'i18n' => array( 'giver_name', 'nb_sips' ),
-                    'giver' => $giver,
+                    'giver_id' => $giver_id,
                     'giver_name' => $giver['player_name'],
                     'giver_color' => $giver['player_color'],
                     'nb_sips' => $nb_sips,
                     'giver_cards'=>$cards_player
                     
+                ) );
+                
+                self::notifyAllPlayers('clearPlayerBoard', '', array(
+                    'giver_id' => $giver_id,
+                    'giver_cards'=>$cards_player,
+                    'lye' => true
                 ) );
             }
         }
@@ -422,7 +474,7 @@ class PyramideQSG extends Table
         {
             self::notifyAllPlayers( 'lye', clienttranslate('${giver_name} is a lyer. He passed. ${giver_name} must drink the double (${nb_sips} sips).'), array(
                 'i18n' => array( 'giver_name', 'nb_sips' ),
-                'giver' => $giver,
+                'giver_id' => $giver_id,
                 'giver_name' => $giver['player_name'],
                 'nb_sips' => $nb_sips,
                 'giver_cards'=>null
@@ -435,7 +487,10 @@ class PyramideQSG extends Table
         $sql = "DELETE FROM sip WHERE sip_receiver_id = ".$sip['receiver_id']." AND sip_giver_id = ".$giver_id;
         self::DbQuery( $sql );
         
-        $this->gamestate->nextState('');
+        if($needNewCards)
+            $this->gamestate->nextState('prove');
+            else
+                $this->gamestate->nextState('lye');
         
     }
     /*
