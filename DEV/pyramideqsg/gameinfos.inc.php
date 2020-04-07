@@ -13,38 +13,38 @@
 $gameinfos = array( 
 
 // Name of the game in English (will serve as the basis for translation) 
-'game_name' => "Pyramid",
+'game_name' => "Pyramid (Card) Drinking Game",
 
 // Game designer (or game designers, separated by commas)
-'designer' => 'Kots',       
+'designer' => "Ko'ts",       
 
 // Game artist (or game artists, separated by commas)
-'artist' => 'Kots',         
+'artist' => "Kot's",         
 
 // Year of FIRST publication of this game. Can be negative.
 'year' => 2000,                 
 
 // Game publisher
-'publisher' => 'My Publishing Company',                     
+'publisher' => '',                     
 
 // Url of game publisher website
-'publisher_website' => 'http://www.mypublishingcompany.com/',   
+'publisher_website' => '',   
 
 // Board Game Geek ID of the publisher
-'publisher_bgg_id' => 1234,
+'publisher_bgg_id' => 0,
 
 // Board game geek ID of the game
-'bgg_id' => 54321,
+'bgg_id' => 0,
 
 
 // Players configuration that can be played (ex: 2 to 4 players)
-'players' => array( 2,3,4,5,6 ),    
+'players' => array( 2,3,4,5,6,7,8,9,10 ),    
 
 // Suggest players to play with this number of players. Must be null if there is no such advice, or if there is only one possible player configuration.
-'suggest_player_number' => 2,
+'suggest_player_number' => 4,
 
 // Discourage players to play with these numbers of players. Must be null if there is no such advice.
-'not_recommend_player_number' => null,
+'not_recommend_player_number' => (2),
 // 'not_recommend_player_number' => array( 2, 3 ),      // <= example: this is not recommended to play this game with 2 or 3 players
 
 
@@ -123,8 +123,8 @@ $gameinfos = array(
 // Each paragraph must be wrapped with totranslate() for translation and should not contain html (plain text without formatting).
 // A good length for this text is between 100 and 150 words (about 6 to 9 lines on a standard display)
 'presentation' => array(
-//    totranslate("This wonderful game is about geometric shapes!"),
-//    totranslate("It was awarded best triangle game of the year in 2005 and nominated for the Spiel des Jahres."),
+    totranslate("This is the classic drinking game pyramid. Grab your glass (not necessary with alchool ;)) and let's play ! "),
+    totranslate("You can be honnest or lye to every turn.Up to you... ."),
 //    ...
 ),
 
@@ -135,7 +135,7 @@ $gameinfos = array(
 //  http://en.doc.boardgamearena.com/Game_meta-information:_gameinfos.inc.php
 //  IMPORTANT: this list should be ORDERED, with the most important tag first.
 //  IMPORTANT: it is mandatory that the FIRST tag is 1, 2, 3 and 4 (= game category)
-'tags' => array( 2 ),
+'tags' => array( 2,10,22,200,205 ),
 
 
 //////// BGA SANDBOX ONLY PARAMETERS (DO NOT MODIFY)

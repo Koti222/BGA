@@ -3,7 +3,7 @@
 /**
  *------
  * BGA framework: © Gregory Isabelli <gisabelli@boardgamearena.com> & Emmanuel Colin <ecolin@boardgamearena.com>
- * PyramideQSG implementation : © <Your name here> <Your email address here>
+ * PyramideQSG implementation : © Quentin Salgues <quentinsalgues@hotmail.fr>
  *
  * This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
  * See http://en.boardgamearena.com/#!doc/Studio for more information.
@@ -25,7 +25,43 @@
  */
 
 $game_options = array(
-
+    
+    100 => array(
+        'name' => totranslate('Number of levels of the pyramid'),
+        'values' => array(
+            3 => array( 'name' => totranslate( '3 levels' ) ),
+            4 => array( 'name' => totranslate( '4 levels' ) ),
+            5 => array( 'name' => totranslate( '5 levels' ) ),
+            6 => array( 'name' => totranslate( '6 levels' ) ),
+        ),
+        'default' => 3,
+        
+        'startcondition' => array(
+            3 => array(),
+            4 => array(
+                array(
+                    'type' => 'maxplayers',
+                    'value' => 9,
+                    'message' => totranslate('3 levels option is available for 9 players maximum.')
+                )
+            ),
+            5 => array(
+                array(
+                    'type' => 'maxplayers',
+                    'value' => 8,
+                    'message' => totranslate('5 levels option is available for 8 players maximum.')
+                )
+            ),
+            6 => array(
+                array(
+                    'type' => 'maxplayers',
+                    'value' => 7,
+                    'message' => totranslate('6 levels option is available for 7 players maximum.')
+                )
+            ),
+        ),
+    )
+    
     /*
     
     // note: game variant ID should start at 100 (ie: 100, 101, 102, ...). The maximum is 199.

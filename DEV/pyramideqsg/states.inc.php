@@ -2,7 +2,7 @@
 /**
  *------
  * BGA framework: © Gregory Isabelli <gisabelli@boardgamearena.com> & Emmanuel Colin <ecolin@boardgamearena.com>
- * PyramideQSG implementation : © <Your name here> <Your email address here>
+ * PyramideQSG implementation : © Quentin Salgues <quentinsalgues@hotmail.fr>
  *
  * This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
  * See http://en.boardgamearena.com/#!doc/Studio for more information.
@@ -70,7 +70,7 @@ $machinestates = array(
         "type" => "multipleactiveplayer",
         "action" => "stLookCards",
 		"possibleactions" => array( "lookCards" ),
-        "transitions" => array( "lookCards" => 20 )
+        "transitions" => array( "" => 20 )
     ),
     
     20 => array(
@@ -85,11 +85,11 @@ $machinestates = array(
     30 => array(
         "name" => "choosePlayer",
         "description" => clienttranslate('All players must choose a player or pass.'),
-        "descriptionmyturn" => clienttranslate('${you} must choose a player or pass.'),
+        "descriptionmyturn" => clienttranslate('${you} must choose a player with a number of cards or pass.'),
         "type" => "multipleactiveplayer",
         "action" => "stchoosePlayer",
         "possibleactions" => array( "choosePlayer", "pass" ),
-        "transitions" => array( "choosePlayer" => 32, "pass" => 32)
+        "transitions" => array( "" => 32)
     ),
     
     32 => array(
@@ -134,7 +134,7 @@ $machinestates = array(
         "descriptionmyturn" => clienttranslate('${you} must memorise your new card(s).'),
         "type" => "activeplayer",
         "possibleactions" => array( "lookCards" ),
-        "transitions" => array( "lookCards" => 32 )
+        "transitions" => array( "" => 32 )
     ),
     
 /*
